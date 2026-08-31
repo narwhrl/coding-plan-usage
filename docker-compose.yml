@@ -1,0 +1,17 @@
+services:
+  coding-plan-usage:
+    build: .
+    image: coding-plan-usage
+    container_name: coding-plan-usage
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      # 访问口令；不设置则免认证（仅建议内网/本机）
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD:-}
+      # 凭证加密主密钥（任意非空字符串；换钥匙会导致已存凭证无法解密）
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env}
+      SQLITE_PATH: /data/app.db
+      TZ: ${TZ:-Asia/Shanghai}
+    restart: unless-stopped
