@@ -82,7 +82,19 @@
     "baseUrl": "API base URL",
     "enabled": "Enabled",
     "credentials": "Credentials (leave empty to keep)",
-    "noSnapshots": "No successful snapshots yet"
+    "noSnapshots": "No successful snapshots yet",
+    "usage": {
+      "title": "Usage",
+      "tokens": "Tokens",
+      "calls": "Calls",
+      "totalTokens": "Total tokens",
+      "totalCalls": "Total calls",
+      "peak": "Peak hour",
+      "hourly": "Hourly (latest day)",
+      "daily": "Daily",
+      "byModel": "By model",
+      "window": "Window: {from} – {to}"
+    }
   },
   "settings": {
     "title": "Settings",

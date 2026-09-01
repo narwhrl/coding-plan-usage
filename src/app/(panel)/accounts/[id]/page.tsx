@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Line,
   LineChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogBackdrop,
@@ -45,6 +47,8 @@ import {
   DialogViewport,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Progress, ProgressIndicator, ProgressTrack } from "@/components/ui/progress";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -58,7 +62,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AccountView, CredentialFieldView, HistorySnapshot, ProviderView } from "@/lib/types";
-import { localDateTime, monogram, windowValueText } from "@/lib/format";
+import { compactNumber, localDateTime, monogram, windowValueText } from "@/lib/format";
+import {
+  dailySeries,
+  latestDaySeries,
+  parseModelUsage,
+  peakHour,
+  type ModelUsage,
+  type UsagePoint,
+} from "@/lib/model-usage";
 
 export default function AccountDetailPage() {
   const params = useParams<{ id: string }>();
@@ -126,6 +138,9 @@ export default function AccountDetailPage() {
   }
 
   const display = account.lastOkSnapshot ?? account.latestSnapshot;
+  // raw 列形状：{ meta: 适配器 meta, responses: 调试切片 }（见 schema.ts 注释）
+  const raw = display?.meta as { meta?: { modelUsage?: unknown } } | null | undefined;
+  const usage = parseModelUsage(raw?.meta?.modelUsage);
   const seriesNames = collectSeriesNames(history ?? []);
 
   return (
@@ -212,6 +227,8 @@ export default function AccountDetailPage() {
         </Card>
       ) : null}
 
+      {usage ? <UsageCard usage={usage} /> : null}
+
       {/* 趋势图 */}
       <Card>
         <CardHeader>
@@ -233,12 +250,12 @@ export default function AccountDetailPage() {
                       color: "var(--popover-foreground)",
                     }}
                   />
-                  {seriesNames.map((name) => (
+                  {seriesNames.map((name, index) => (
                     <Line
                       key={name}
                       type="monotone"
                       dataKey={name}
-                      stroke="var(--chart-1)"
+                      stroke={`var(--chart-${(index % 5) + 1})`}
                       strokeWidth={2}
                       dot={false}
                       connectNulls
@@ -294,6 +311,122 @@ export default function AccountDetailPage() {
     </div>
   );
 }
+function UsageBarChart({ data, metric }: { data: UsagePoint[]; metric: "tokens" | "calls" }) {
+  const t = useTranslations();
+  return (
+    <div className="h-48">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+          <YAxis width={48} tick={{ fontSize: 12 }} tickFormatter={(v: number) => compactNumber(v)} />
+          <Tooltip
+            contentStyle={{
+              background: "var(--popover)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              color: "var(--popover-foreground)",
+            }}
+            formatter={(value) => compactNumber(Number(value))}
+          />
+          <Bar dataKey={metric} fill={metric === "tokens" ? "var(--chart-1)" : "var(--chart-2)"} name={t(`detail.usage.${metric}`)} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function UsageCard({ usage }: { usage: ModelUsage }) {
+  const t = useTranslations();
+  const [metric, setMetric] = useState<"tokens" | "calls">("tokens");
+  const peak = peakHour(usage);
+  const modelsTotal = usage.models.reduce((acc, m) => acc + m.totalTokens, 0);
+  return (
+    <Card data-testid="usage-card">
+      <CardHeader>
+        <CardTitle className="text-base">{t("detail.usage.title")}</CardTitle>
+        <CardAction>
+          <ToggleGroup
+            value={[metric]}
+            onValueChange={(value) => {
+              const next = value[0];
+              if (next === "tokens" || next === "calls") setMetric(next);
+            }}
+          >
+            <ToggleGroupItem value="tokens" variant="outline" size="sm">
+              {t("detail.usage.tokens")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="calls" variant="outline" size="sm">
+              {t("detail.usage.calls")}
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-xs text-muted-foreground">{t("detail.usage.totalTokens")}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{compactNumber(usage.totalTokens)}</p>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-xs text-muted-foreground">{t("detail.usage.totalCalls")}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{compactNumber(usage.totalCalls)}</p>
+          </div>
+          {peak ? (
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-xs text-muted-foreground">{t("detail.usage.peak")}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {compactNumber(peak.tokens)}{" "}
+                <span className="text-sm font-normal text-muted-foreground">@ {peak.label.slice(6)}</span>
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t("detail.usage.hourly")}</p>
+          <UsageBarChart data={latestDaySeries(usage)} metric={metric} />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t("detail.usage.daily")}</p>
+          <UsageBarChart data={dailySeries(usage)} metric={metric} />
+        </div>
+
+        {usage.models.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium">{t("detail.usage.byModel")}</p>
+            {usage.models.map((m) => {
+              const share = modelsTotal > 0 ? (m.totalTokens / modelsTotal) * 100 : 0;
+              return (
+                <div key={m.name} className="space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="truncate font-medium">{m.name}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {compactNumber(m.totalTokens)} · {share.toFixed(1)}%
+                    </span>
+                  </div>
+                  {modelsTotal > 0 ? (
+                    <Progress value={share}>
+                      <ProgressTrack>
+                        <ProgressIndicator />
+                      </ProgressTrack>
+                    </Progress>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <p className="text-xs text-muted-foreground">
+          {t("detail.usage.window", { from: usage.xTime[0], to: usage.xTime[usage.xTime.length - 1] })}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function providerFields(account: AccountView, providers: ProviderView[]): CredentialFieldView[] {
   return providers.find((p) => p.id === account.providerId)?.fields ?? [];
 }

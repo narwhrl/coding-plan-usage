@@ -82,7 +82,19 @@
     "baseUrl": "API 地址",
     "enabled": "启用",
     "credentials": "凭证（留空保持不变）",
-    "noSnapshots": "暂无成功快照"
+    "noSnapshots": "暂无成功快照",
+    "usage": {
+      "title": "用量",
+      "tokens": "词元",
+      "calls": "调用",
+      "totalTokens": "总词元",
+      "totalCalls": "总调用",
+      "peak": "峰值小时",
+      "hourly": "按小时（最近一天）",
+      "daily": "按天",
+      "byModel": "按模型",
+      "window": "窗口：{from} – {to}"
+    }
   },
   "settings": {
     "title": "设置",
