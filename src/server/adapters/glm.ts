@@ -3,11 +3,9 @@ import { numberOrNull, type Adapter, type AdapterResult } from "./types";
 /**
  * GLM Coding Plan（官方）。
  * 来源：zai-org/zai-coding-plugins 官方插件 query-usage.mjs。
- * - GET {base}/api/monitor/usage/quota/limit → data.limits[]
- *   TOKENS_LIMIT → 5 小时 token 窗口（percentage 为已用百分比）
- *   TIME_LIMIT   → 月度 MCP 窗口（percentage、currentValue=已用、usage=总量）
+ *   TOKENS_LIMIT：第一个 → 5 小时 token 窗口，第二个 → 周额度窗口（percentage 为已用百分比）
  * - GET {base}/api/monitor/usage/model-usage?startTime=..&endTime=..（yyyy-MM-dd HH:mm:ss URL 编码）
- *   窗口=昨天当前整点 → 今天当前整点末，汇总进 meta.modelUsage。
+ *   窗口=近 7 个本地自然日（00:00:00 → 23:59:59.999），汇总进 meta.modelUsage。
  * Authorization 头发原始 token（官方插件不带 Bearer；粘贴带前缀则剥离）。
  */
 
@@ -64,14 +62,17 @@ export const glmAdapter: Adapter = {
     const limits = limitBody?.data?.limits ?? [];
 
     const windows = [];
+    let tokensLimitCount = 0;
     const meta: Record<string, unknown> = {};
     for (const item of limits) {
       if (item?.type === "TOKENS_LIMIT") {
         const pct = numberOrNull(item.percentage);
+        const isFirst = tokensLimitCount === 0;
+        tokensLimitCount++;
         if (pct !== null) {
           windows.push({
-            kind: "5h",
-            label: "Token usage (5h)",
+            kind: isFirst ? "5h" : "weekly",
+            label: isFirst ? "Token usage (5h)" : "Token usage (weekly)",
             unit: "percent",
             remainingPct: Math.max(0, Math.min(100, 100 - pct)),
           });
@@ -94,11 +95,11 @@ export const glmAdapter: Adapter = {
     }
     if (windows.length === 0) throw new Error("GLM: quota/limit response has no usable limits");
 
-    // model-usage：昨天当前整点 → 今天当前整点末（失败不阻断主窗口）
+    // model-usage：近 7 个本地自然日（社区插件 7 天窗口，失败不阻断主窗口）
     try {
       const now = ctx.now();
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, now.getHours(), 0, 0, 0);
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 59, 59, 999);
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       const qs = `?startTime=${encodeURIComponent(formatDateTime(start))}&endTime=${encodeURIComponent(formatDateTime(end))}`;
       const modelRes = await ctx.fetchFn(`${base}/api/monitor/usage/model-usage${qs}`, { headers });
       if (modelRes.ok) {

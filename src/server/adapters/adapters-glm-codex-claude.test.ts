@@ -4,11 +4,11 @@ import { codexAdapter } from "./codex";
 import { claudeAdapter } from "./claude";
 
 /** stub fetch：按 URL 首段路由到 handler。 */
-function routeFetch(routes: Record<string, (init?: RequestInit) => Response>): typeof fetch {
+function routeFetch(routes: Record<string, (init?: RequestInit, url?: string) => Response>): typeof fetch {
   return (async (input: unknown, init?: RequestInit) => {
     const url = String(input);
     for (const [prefix, handler] of Object.entries(routes)) {
-      if (url.startsWith(prefix)) return handler(init);
+      if (url.startsWith(prefix)) return handler(init, url);
     }
     return new Response("no route for " + url, { status: 404 });
   }) as typeof fetch;
@@ -21,7 +21,8 @@ const ctxBase = {
 };
 
 describe("glm adapter", () => {
-  it("normalizes quota/limit into 5h + monthly windows", async () => {
+  it("normalizes quota/limit into 5h + weekly + monthly windows and queries a 7-day model-usage window", async () => {
+    let modelUsageUrl = "";
     const fetchFn = routeFetch({
       "https://api.z.ai/api/monitor/usage/quota/limit": () =>
         new Response(
@@ -29,14 +30,17 @@ describe("glm adapter", () => {
             data: {
               limits: [
                 { type: "TOKENS_LIMIT", percentage: 40 },
+                { type: "TOKENS_LIMIT", percentage: 29 },
                 { type: "TIME_LIMIT", percentage: 25, currentValue: 250, usage: 1000 },
               ],
             },
           }),
           { status: 200 },
         ),
-      "https://api.z.ai/api/monitor/usage/model-usage": () =>
-        new Response(JSON.stringify({ data: [{ model: "glm-4.6", tokens: 12345 }] }), { status: 200 }),
+      "https://api.z.ai/api/monitor/usage/model-usage": (_init, url) => {
+        modelUsageUrl = String(url);
+        return new Response(JSON.stringify({ data: [{ model: "glm-4.6", tokens: 12345 }] }), { status: 200 });
+      },
     });
     const result = await glmAdapter.fetchUsage({
       ...ctxBase,
@@ -44,15 +48,30 @@ describe("glm adapter", () => {
       config: { baseUrl: "https://api.z.ai" },
       fetchFn,
     });
-    expect(result.windows).toHaveLength(2);
-    const [w5h, monthly] = result.windows;
+    expect(result.windows).toHaveLength(3);
+    const [w5h, weekly, monthly] = result.windows;
     expect(w5h.kind).toBe("5h");
+    expect(w5h.label).toBe("Token usage (5h)");
     expect(w5h.remainingPct).toBe(60);
+    expect(weekly.kind).toBe("weekly");
+    expect(weekly.label).toBe("Token usage (weekly)");
+    expect(weekly.remainingPct).toBe(71);
     expect(monthly.kind).toBe("monthly");
     expect(monthly.used).toBe(250);
     expect(monthly.total).toBe(1000);
     expect(monthly.remainingPct).toBe(75);
     expect((result.meta?.modelUsage as unknown[]).length).toBe(1);
+
+    const now = ctxBase.now();
+    const p = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    expect(modelUsageUrl).toBe(
+      `https://api.z.ai/api/monitor/usage/model-usage` +
+        `?startTime=${encodeURIComponent(fmt(start))}&endTime=${encodeURIComponent(fmt(end))}`,
+    );
   });
 
   it("sends raw token without Bearer prefix", async () => {
