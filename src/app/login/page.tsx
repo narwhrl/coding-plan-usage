@@ -50,8 +50,14 @@ export default function LoginPage() {
             id="password"
             type="password"
             autoFocus
+            autoComplete="current-password"
+            name="password"
+            required
             value={password}
-            onValueChange={setPassword}
+            onValueChange={(value) => {
+              setPassword(value);
+              setError(null);
+            }}
             aria-invalid={error !== null}
             data-testid="login-password"
           />
@@ -61,7 +67,7 @@ export default function LoginPage() {
             </p>
           ) : null}
         </div>
-        <Button type="submit" className="w-full" disabled={busy || password.length === 0} data-testid="login-submit">
+        <Button type="submit" className="w-full" disabled={busy} data-testid="login-submit">
           {busy ? t("submitting") : t("submit")}
         </Button>
       </form>
