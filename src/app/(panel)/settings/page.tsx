@@ -73,7 +73,7 @@ export default function SettingsPage() {
           <TabsTab value="general">{t("tabGeneral")}</TabsTab>
         </TabsList>
 
-        <TabsContent value="accounts" className="space-y-6">
+        <TabsContent value="accounts" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <AccountAddForm providers={providers} onSaved={load} />
           <Card>
             <CardHeader>
@@ -170,11 +170,11 @@ function GeneralSettingsForm({ settings, onSaved }: { settings: GeneralSettings 
   };
 
   return (
-    <Card>
+    <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle className="text-base">{t("title")}</CardTitle>
       </CardHeader>
-      <CardContent className="max-w-sm space-y-4">
+      <CardContent className="space-y-4">
         <div className="grid gap-2">
           <Label htmlFor="general-interval">{t("defaultInterval")}</Label>
           <Input

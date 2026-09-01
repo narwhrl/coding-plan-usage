@@ -66,7 +66,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
       <CardHeader>
         <CardTitle className="text-base">{t("add")}</CardTitle>
       </CardHeader>
-      <CardContent className="grid max-w-xl gap-4">
+      <CardContent className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="add-provider">{t("provider")}</Label>
           <Select

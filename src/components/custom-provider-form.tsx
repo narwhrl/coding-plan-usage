@@ -119,12 +119,12 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
   const customProviders = providers.filter((p) => p.kind === "custom");
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("create")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid max-w-2xl gap-4">
+      <CardContent className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="custom-name">{t("name")}</Label>
