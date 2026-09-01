@@ -11,17 +11,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Project constraints — coding-plan-usage
 
-## UI 规则
+## UI rules
 
-- 只允许使用已 vendored 的 `src/components/ui/` 组件（54 个原语，来自 @coss registry 的一次性拷贝）。
-- **禁止** `pnpm add @coss/ui`——该 npm 包不存在（registry 404）。
-- **禁止**再次从 registry 拉取组件，除非用户明确要求补原语。
-- 颜色/圆角/间距只用 `src/app/globals.css` 的令牌（`:root`/`.dark` CSS 变量 → `@theme inline`）；禁止组件内写死 hex/oklch。
-- 新组件样式参照 cal.com 克制风格：白底灰阶、黑主 CTA、8/12/16 间距节奏；详见 `docs/design-system.md`。
-- 提供商图标一律两字母 monogram 文本，不引入品牌图标依赖。
+- Use only the vendored components in `src/components/ui/` (54 primitives, a one-time copy from the @coss registry).
+- **Never** `pnpm add @coss/ui` — that npm package does not exist (registry 404).
+- **Never** pull components from the registry again, unless the user explicitly asks to add a primitive.
+- Colors/radii/spacing come only from the tokens in `src/app/globals.css` (`:root`/`.dark` CSS variables → `@theme inline`); no hardcoded hex/oklch inside components.
+- Style new components after cal.com's restrained look: white background with gray scale, black primary CTA, 8/12/16 spacing rhythm; see `docs/design-system.md`.
+- Provider icons are always two-letter monogram text; do not add brand-icon dependencies.
 
-## 架构规则
+## Architecture rules
 
-- 新增提供商适配器流程见 `docs/design-system.md` 末节与 `src/server/adapters/registry.ts`。
-- SQLite 快照的 `windows` JSON 形状是前后端契约（`src/server/db/schema.ts` 注释），改动需同步前端。
-- 凭证只存 AES-256-GCM 密文（`src/server/crypto.ts`），任何路径不得明文落库或写日志。
+- The flow for adding a provider adapter lives in the last section of `docs/design-system.md` and in `src/server/adapters/registry.ts`.
+- The `windows` JSON shape of SQLite snapshots is a front/back-end contract (see the comment in `src/server/db/schema.ts`); any change must be synced with the frontend.
+- Credentials are stored only as AES-256-GCM ciphertext (`src/server/crypto.ts`); no code path may persist or log them in plaintext.
