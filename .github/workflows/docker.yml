@@ -2,9 +2,13 @@ name: Publish image
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+
+concurrency:
+  group: publish-image-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -12,39 +16,100 @@ permissions:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        env:
+          DOCKER_METADATA_SHORT_SHA_LENGTH: 12
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Reject invalid release tag
+        if: startsWith(github.ref, 'refs/tags/') && startsWith(steps.meta.outputs.version, 'sha-')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          echo "::error title=Invalid release tag::${RELEASE_TAG} is not valid SemVer; expected vMAJOR.MINOR.PATCH"
+          exit 1
+
+      - name: Build image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          load: true
+          platforms: linux/amd64
+          provenance: false
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            coding-plan-usage:smoke
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+      - name: Smoke test image
+        run: |
+          container_id="$(docker run --detach --publish 127.0.0.1:3000:3000 --env APP_ENCRYPTION_KEY=smoke-test-only --env SQLITE_PATH=/tmp/app.db coding-plan-usage:smoke)"
+          cleanup() {
+            status="$?"
+            if [ "$status" -ne 0 ]; then docker logs "$container_id"; fi
+            docker rm --force "$container_id" >/dev/null
+          }
+          trap cleanup EXIT
+
+          for attempt in {1..30}; do
+            if response="$(curl --connect-timeout 1 --max-time 2 --fail --silent http://127.0.0.1:3000/api/health)" && [ "$response" = '{"ok":true}' ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "::error title=Smoke test failed::Container did not return {\"ok\":true} from /api/health"
+          exit 1
+
+      - name: Reject stale publication
+        env:
+          EXPECTED_REF_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r current_ref_sha current_ref_type < <(
+            gh api "repos/${GITHUB_REPOSITORY}/git/ref/${GITHUB_REF#refs/}" --jq '[.object.sha, .object.type] | @tsv'
+          )
+          while [ "$current_ref_type" = "tag" ]; do
+            read -r current_ref_sha current_ref_type < <(
+              gh api "repos/${GITHUB_REPOSITORY}/git/tags/${current_ref_sha}" --jq '[.object.sha, .object.type] | @tsv'
+            )
+          done
+          if [ "$current_ref_type" != "commit" ] || [ "$current_ref_sha" != "$EXPECTED_REF_SHA" ]; then
+            echo "::error title=Stale publication::${GITHUB_REF} resolves to ${current_ref_type} ${current_ref_sha}; refusing to publish commit ${EXPECTED_REF_SHA}"
+            exit 1
+          fi
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Push tested image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then docker push "$tag"; fi
+          done <<< "$IMAGE_TAGS"

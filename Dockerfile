@@ -17,7 +17,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # build 阶段不需要真实密钥；APP_ENCRYPTION_KEY 仅运行时使用
-RUN pnpm build
+RUN pnpm lint && pnpm test && pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
