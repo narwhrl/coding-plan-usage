@@ -2,12 +2,16 @@
 
 FROM node:22-alpine AS deps
 WORKDIR /app
+ENV CI=true
+# better-sqlite3 compiles from source; alpine has no python/make/g++ by default
+RUN apk add --no-cache python3 make g++
 RUN corepack enable pnpm
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+ENV CI=true
 RUN corepack enable pnpm
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
