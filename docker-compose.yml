@@ -1,7 +1,8 @@
 services:
   coding-plan-usage:
     build: .
-    image: coding-plan-usage
+    # Published images: ghcr.io/<owner>/coding-plan-usage:latest
+    image: ${IMAGE:-coding-plan-usage}
     container_name: coding-plan-usage
     ports:
       - "3000:3000"

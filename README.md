@@ -21,6 +21,20 @@ docker compose up --build -d
 
 Data lives in `./data/app.db` (mounted volume) and survives restarts.
 
+### Pull a published image (GHCR)
+
+Pushes to `main`/`master` (and `v*` tags) build `ghcr.io/<owner>/<repo>` via GitHub Actions. First-time on a public repo: GitHub → Packages → this image → Package settings → Change visibility → Public.
+
+```bash
+# public image
+docker pull ghcr.io/<owner>/coding-plan-usage:latest
+
+# private image
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u USERNAME --password-stdin
+```
+
+In `docker-compose.yml`, set `image: ghcr.io/<owner>/coding-plan-usage:latest` and drop `build: .` if you only want to pull.
+
 ## Environment variables
 
 | Variable | Required | Description |
