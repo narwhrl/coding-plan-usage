@@ -375,21 +375,21 @@ function EditAccountDialog({
             <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-label">{t("label")}</Label>
-                <Input id="edit-label" value={label} onChange={(e) => setLabel(e.target.value)} />
+                <Input id="edit-label" value={label} onValueChange={setLabel} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-interval">{t("interval")}</Label>
-                  <Input id="edit-interval" inputMode="numeric" value={interval} onChange={(e) => setIntervalValue(e.target.value)} />
+                  <Input id="edit-interval" inputMode="numeric" value={interval} onValueChange={setIntervalValue} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-warn">{t("warnPct")}</Label>
-                  <Input id="edit-warn" inputMode="numeric" value={warnPct} onChange={(e) => setWarnPct(e.target.value)} />
+                  <Input id="edit-warn" inputMode="numeric" value={warnPct} onValueChange={setWarnPct} />
                 </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-baseurl">{t("baseUrl")}</Label>
-                <Input id="edit-baseurl" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://" />
+                <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="edit-enabled">{t("enabled")}</Label>
@@ -413,8 +413,8 @@ function EditAccountDialog({
                       id={`edit-cred-${field.key}`}
                       type="password"
                       value={credentialValues[field.key] ?? ""}
-                      onChange={(e) =>
-                        setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      onValueChange={(value) =>
+                        setCredentialValues((prev) => ({ ...prev, [field.key]: value }))
                       }
                       placeholder="—"
                     />

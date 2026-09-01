@@ -51,7 +51,7 @@ export default function LoginPage() {
             type="password"
             autoFocus
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onValueChange={setPassword}
             aria-invalid={error !== null}
             data-testid="login-password"
           />

@@ -128,11 +128,11 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="custom-name">{t("name")}</Label>
-              <Input id="custom-name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input id="custom-name" value={name} onValueChange={setName} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-unit">{t("unit")}</Label>
-              <Input id="custom-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
+              <Input id="custom-unit" value={unit} onValueChange={setUnit} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -141,14 +141,14 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
               <Input
                 id="custom-baseurl"
                 value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
+                onValueChange={setBaseUrl}
                 placeholder="https://api.example.com"
                 data-testid="custom-baseurl"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-path">{t("path")}</Label>
-              <Input id="custom-path" value={path} onChange={(e) => setPath(e.target.value)} placeholder="/v1/quota" data-testid="custom-path" />
+              <Input id="custom-path" value={path} onValueChange={setPath} placeholder="/v1/quota" data-testid="custom-path" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -176,36 +176,36 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
             {authType === "header" ? (
               <div className="grid gap-2">
                 <Label htmlFor="custom-authheader">{t("authHeaderName")}</Label>
-                <Input id="custom-authheader" value={authHeader} onChange={(e) => setAuthHeader(e.target.value)} />
+                <Input id="custom-authheader" value={authHeader} onValueChange={setAuthHeader} />
               </div>
             ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="custom-headers">{t("headers")}</Label>
-            <Input id="custom-headers" value={headers} onChange={(e) => setHeaders(e.target.value)} placeholder='{"X-Custom":"v"}' />
+            <Input id="custom-headers" value={headers} onValueChange={setHeaders} placeholder='{"X-Custom":"v"}' />
           </div>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <div className="grid gap-2">
               <Label htmlFor="custom-total">{t("mappingTotal")}</Label>
-              <Input id="custom-total" value={mappingTotal} onChange={(e) => setMappingTotal(e.target.value)} placeholder="data.total" data-testid="mapping-total" />
+              <Input id="custom-total" value={mappingTotal} onValueChange={setMappingTotal} placeholder="data.total" data-testid="mapping-total" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-used">{t("mappingUsed")}</Label>
-              <Input id="custom-used" value={mappingUsed} onChange={(e) => setMappingUsed(e.target.value)} placeholder="data.used" />
+              <Input id="custom-used" value={mappingUsed} onValueChange={setMappingUsed} placeholder="data.used" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-remaining">{t("mappingRemaining")}</Label>
-              <Input id="custom-remaining" value={mappingRemaining} onChange={(e) => setMappingRemaining(e.target.value)} placeholder="data.remaining" data-testid="mapping-remaining" />
+              <Input id="custom-remaining" value={mappingRemaining} onValueChange={setMappingRemaining} placeholder="data.remaining" data-testid="mapping-remaining" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-resetat">{t("mappingResetAt")}</Label>
-              <Input id="custom-resetat" value={mappingResetAt} onChange={(e) => setMappingResetAt(e.target.value)} placeholder="data.resetAt" />
+              <Input id="custom-resetat" value={mappingResetAt} onValueChange={setMappingResetAt} placeholder="data.resetAt" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="custom-divisor">{t("divisor")}</Label>
-              <Input id="custom-divisor" inputMode="numeric" value={divisor} onChange={(e) => setDivisor(e.target.value)} placeholder="1" />
+              <Input id="custom-divisor" inputMode="numeric" value={divisor} onValueChange={setDivisor} placeholder="1" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custom-testkey">{t("testKey")}</Label>
@@ -214,7 +214,7 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
                 type="password"
                 autoComplete="off"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onValueChange={setApiKey}
                 data-testid="custom-testkey"
               />
             </div>

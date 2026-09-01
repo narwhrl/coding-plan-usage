@@ -181,7 +181,7 @@ function GeneralSettingsForm({ settings, onSaved }: { settings: GeneralSettings 
             id="general-interval"
             inputMode="numeric"
             value={interval}
-            onChange={(e) => setIntervalValue(e.target.value)}
+            onValueChange={setIntervalValue}
             data-testid="general-interval"
           />
         </div>
@@ -191,7 +191,7 @@ function GeneralSettingsForm({ settings, onSaved }: { settings: GeneralSettings 
             id="general-warn"
             inputMode="numeric"
             value={warnPct}
-            onChange={(e) => setWarnPct(e.target.value)}
+            onValueChange={setWarnPct}
             data-testid="general-warn"
           />
         </div>

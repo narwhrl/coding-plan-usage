@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export type InputProps = Omit<
   InputPrimitive.Props & React.RefAttributes<HTMLInputElement>,
-  "size"
+  "size" | "onChange"
 > & {
   size?: "sm" | "default" | "lg" | number;
   unstyled?: boolean;

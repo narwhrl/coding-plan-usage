@@ -111,7 +111,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 type="password"
                 autoComplete="off"
                 value={credentialValues[field.key] ?? ""}
-                onChange={(e) => setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                onValueChange={(value) => setCredentialValues((prev) => ({ ...prev, [field.key]: value }))}
                 placeholder={field.placeholder}
                 data-testid={`cred-${field.key}`}
               />
@@ -121,7 +121,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
 
         <div className="grid gap-2">
           <Label htmlFor="add-label">{t("label")}</Label>
-          <Input id="add-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={provider?.name} />
+          <Input id="add-label" value={label} onValueChange={setLabel} placeholder={provider?.name} />
         </div>
 
         {provider?.baseUrlOptions && provider.baseUrlOptions.length > 0 ? (
@@ -155,7 +155,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               id="add-interval"
               inputMode="numeric"
               value={interval}
-              onChange={(e) => setIntervalValue(e.target.value)}
+              onValueChange={setIntervalValue}
               placeholder="15"
             />
           </div>
@@ -165,7 +165,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               id="add-warn"
               inputMode="numeric"
               value={warnPct}
-              onChange={(e) => setWarnPct(e.target.value)}
+              onValueChange={setWarnPct}
               placeholder="20"
             />
           </div>
