@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -35,7 +35,6 @@ import {
   Dialog,
   DialogBackdrop,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -43,7 +42,6 @@ import {
   DialogPopup,
   DialogPortal,
   DialogTitle,
-  DialogTrigger,
   DialogViewport,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -81,30 +79,36 @@ export default function AccountDetailPage() {
   const [history, setHistory] = useState<HistorySnapshot[] | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [editOpen, setEditOpen] = useState(false);
-
-  const load = useCallback(async () => {
-    const [accountsRes, historyRes, providersRes] = await Promise.all([
-      fetch("/api/accounts"),
-      fetch(`/api/accounts/${id}/snapshots`),
-      fetch("/api/providers"),
-    ]);
-    if (accountsRes.ok) {
-      const data = (await accountsRes.json()) as { accounts: AccountView[] };
-      setAccount(data.accounts.find((a) => a.id === id) ?? null);
-    }
-    if (historyRes.ok) {
-      const data = (await historyRes.json()) as { snapshots: HistorySnapshot[] };
-      setHistory(data.snapshots);
-    }
-    if (providersRes.ok) {
-      const data = (await providersRes.json()) as { providers: ProviderView[] };
-      setProviders(data.providers);
-    }
-  }, [id]);
+  const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      const [accountsRes, historyRes, providersRes] = await Promise.all([
+        fetch("/api/accounts"),
+        fetch(`/api/accounts/${id}/snapshots`),
+        fetch("/api/providers"),
+      ]);
+      if (accountsRes.ok) {
+        const data = (await accountsRes.json()) as { accounts: AccountView[] };
+        if (!ignore) setAccount(data.accounts.find((item) => item.id === id) ?? null);
+      }
+      if (historyRes.ok) {
+        const data = (await historyRes.json()) as { snapshots: HistorySnapshot[] };
+        if (!ignore) setHistory(data.snapshots);
+      }
+      if (providersRes.ok) {
+        const data = (await providersRes.json()) as { providers: ProviderView[] };
+        if (!ignore) setProviders(data.providers);
+      }
+    }
+
     void load();
-  }, [load]);
+    return () => {
+      ignore = true;
+    };
+  }, [id, refreshVersion]);
 
   const remove = async () => {
     await fetch(`/api/accounts/${id}`, { method: "DELETE" });
@@ -307,7 +311,7 @@ export default function AccountDetailPage() {
         </CardContent>
       </Card>
 
-      <EditAccountDialog account={account} fields={providerFields(account, providers)} open={editOpen} onOpenChange={setEditOpen} onSaved={load} />
+      <EditAccountDialog account={account} fields={providerFields(account, providers)} open={editOpen} onOpenChange={setEditOpen} onSaved={requestRefresh} />
     </div>
   );
 }

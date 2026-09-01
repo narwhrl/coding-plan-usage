@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -21,16 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectButton,
-  SelectItem,
-  SelectPopup,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
 import { AccountAddForm } from "@/components/account-add-form";
 import { CustomProviderForm } from "@/components/custom-provider-form";
@@ -41,25 +33,41 @@ export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
-
-  const load = useCallback(async () => {
-    const [providersRes, accountsRes, settingsRes] = await Promise.all([
-      fetch("/api/providers"),
-      fetch("/api/accounts"),
-      fetch("/api/settings"),
-    ]);
-    if (providersRes.ok) setProviders(((await providersRes.json()) as { providers: ProviderView[] }).providers);
-    if (accountsRes.ok) setAccounts(((await accountsRes.json()) as { accounts: AccountView[] }).accounts);
-    if (settingsRes.ok) setSettings(((await settingsRes.json()) as { settings: GeneralSettings }).settings);
-  }, []);
+  const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
+  const [generalSaved, setGeneralSaved] = useState(false);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function load() {
+      const [providersRes, accountsRes, settingsRes] = await Promise.all([
+        fetch("/api/providers"),
+        fetch("/api/accounts"),
+        fetch("/api/settings"),
+      ]);
+      if (providersRes.ok) {
+        const data = (await providersRes.json()) as { providers: ProviderView[] };
+        if (!ignore) setProviders(data.providers);
+      }
+      if (accountsRes.ok) {
+        const data = (await accountsRes.json()) as { accounts: AccountView[] };
+        if (!ignore) setAccounts(data.accounts);
+      }
+      if (settingsRes.ok) {
+        const data = (await settingsRes.json()) as { settings: GeneralSettings };
+        if (!ignore) setSettings(data.settings);
+      }
+    }
+
     void load();
-  }, [load]);
+    return () => {
+      ignore = true;
+    };
+  }, [refreshVersion]);
 
   const removeAccount = async (id: string) => {
     await fetch(`/api/accounts/${id}`, { method: "DELETE" });
-    await load();
+    requestRefresh();
     router.refresh();
   };
 
@@ -74,7 +82,7 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="accounts" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <AccountAddForm providers={providers} onSaved={load} />
+          <AccountAddForm providers={providers} onSaved={requestRefresh} />
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("accounts.list")}</CardTitle>
@@ -126,35 +134,45 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="custom">
-          <CustomProviderForm providers={providers} onSaved={load} />
+          <CustomProviderForm providers={providers} onSaved={requestRefresh} />
         </TabsContent>
 
         <TabsContent value="general">
-          <GeneralSettingsForm settings={settings} onSaved={load} />
+          <GeneralSettingsForm
+            key={settings ? `${settings.defaultIntervalMinutes}:${settings.warnPct}` : "loading"}
+            settings={settings}
+            onSaved={requestRefresh}
+            saved={generalSaved}
+            onSavedChange={setGeneralSaved}
+          />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function GeneralSettingsForm({ settings, onSaved }: { settings: GeneralSettings | null; onSaved: () => void }) {
+function GeneralSettingsForm({
+  settings,
+  onSaved,
+  saved,
+  onSavedChange,
+}: {
+  settings: GeneralSettings | null;
+  onSaved: () => void;
+  saved: boolean;
+  onSavedChange: (saved: boolean) => void;
+}) {
   const t = useTranslations("settings.general");
-  const [interval, setIntervalValue] = useState("");
-  const [warnPct, setWarnPct] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [interval, setIntervalValue] = useState(() => String(settings?.defaultIntervalMinutes ?? ""));
+  const [warnPct, setWarnPct] = useState(() => String(settings?.warnPct ?? ""));
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (settings) {
-      setIntervalValue(String(settings.defaultIntervalMinutes));
-      setWarnPct(String(settings.warnPct));
-    }
-  }, [settings]);
-
   const save = async () => {
+    if (!settings) return;
     setBusy(true);
+    onSavedChange(false);
     try {
-      await fetch("/api/settings", {
+      const response = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -162,7 +180,15 @@ function GeneralSettingsForm({ settings, onSaved }: { settings: GeneralSettings 
           warnPct: Number(warnPct) || undefined,
         }),
       });
-      setSaved(true);
+      if (!response.ok) {
+        setIntervalValue(String(settings.defaultIntervalMinutes));
+        setWarnPct(String(settings.warnPct));
+        return;
+      }
+      const data = (await response.json()) as { settings: GeneralSettings };
+      setIntervalValue(String(data.settings.defaultIntervalMinutes));
+      setWarnPct(String(data.settings.warnPct));
+      onSavedChange(true);
       onSaved();
     } finally {
       setBusy(false);

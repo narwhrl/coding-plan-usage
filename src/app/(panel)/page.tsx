@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -14,24 +14,34 @@ export default function OverviewPage() {
   const t = useTranslations("overview");
   const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [error, setError] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/accounts");
-      if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { accounts: AccountView[] };
-      setAccounts(data.accounts);
-      setError(false);
-    } catch {
-      setError(true);
-    }
-  }, []);
+  const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
 
   useEffect(() => {
+    let ignore = false;
+    let latestRequest = 0;
+
+    async function load() {
+      const requestId = ++latestRequest;
+      try {
+        const response = await fetch("/api/accounts");
+        if (!response.ok) throw new Error(String(response.status));
+        const data = (await response.json()) as { accounts: AccountView[] };
+        if (!ignore && requestId === latestRequest) {
+          setAccounts(data.accounts);
+          setError(false);
+        }
+      } catch {
+        if (!ignore && requestId === latestRequest) setError(true);
+      }
+    }
+
     void load();
     const timer = setInterval(() => void load(), 30_000);
-    return () => clearInterval(timer);
-  }, [load]);
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
+  }, [refreshVersion]);
 
   if (accounts === null) {
     return (
@@ -67,7 +77,7 @@ export default function OverviewPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {accounts.map((account) => (
-            <AccountCard key={account.id} account={account} onRefreshed={() => void load()} />
+            <AccountCard key={account.id} account={account} onRefreshed={requestRefresh} />
           ))}
         </div>
       )}
