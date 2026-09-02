@@ -108,6 +108,7 @@
   },
   "settings": {
     "title": "设置",
+    "subtitle": "添加账户、接入自定义提供商、调整全局默认值。",
     "tabAccounts": "账户",
     "tabCustom": "自定义提供商",
     "tabGeneral": "通用",
@@ -123,6 +124,7 @@
       "saving": "保存中…",
       "saved": "已保存并触发首次采集",
       "list": "已有账户",
+      "disabled": "已停用",
       "deleteConfirmTitle": "删除账户",
       "deleteConfirmBody": "将删除该账户及其全部快照。",
       "delete": "删除",

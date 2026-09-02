@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { monogram } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -73,7 +75,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <div>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+      </div>
       <Tabs defaultValue="accounts">
         <TabsList>
           <TabsTab value="accounts">{t("tabAccounts")}</TabsTab>
@@ -81,7 +86,7 @@ export default function SettingsPage() {
           <TabsTab value="general">{t("tabGeneral")}</TabsTab>
         </TabsList>
 
-        <TabsContent value="accounts" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <TabsContent value="accounts" className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
           <AccountAddForm providers={providers} onSaved={requestRefresh} />
           <Card>
             <CardHeader>
@@ -94,15 +99,25 @@ export default function SettingsPage() {
                 accounts.map((account) => (
                   <div
                     key={account.id}
-                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
+                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:bg-accent/40"
                   >
-                    <div className="min-w-0 flex-1">
+                    <span
+                      className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-muted/50 font-heading text-xs font-semibold text-muted-foreground"
+                      aria-hidden
+                    >
+                      {monogram(account.providerName)}
+                    </span>
+                    <Link href={`/accounts/${account.id}`} className="min-w-0 flex-1 hover:underline">
                       <p className="truncate text-sm font-medium">{account.providerName}</p>
                       <p className="truncate text-xs text-muted-foreground">{account.label}</p>
-                    </div>
-                    {!account.enabled ? <Badge variant="secondary">disabled</Badge> : null}
+                    </Link>
+                    {!account.enabled ? <Badge variant="secondary">{t("accounts.disabled")}</Badge> : null}
                     <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="ghost" size="sm" />}>
+                      <AlertDialogTrigger
+                        render={
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" />
+                        }
+                      >
                         {t("accounts.delete")}
                       </AlertDialogTrigger>
                       <AlertDialogPortal>

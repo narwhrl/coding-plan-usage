@@ -11,6 +11,7 @@ import { AccountCard } from "@/components/account-card";
 import type { AccountView } from "@/lib/types";
 import { overviewKpis, sortAccountsByUrgency } from "@/lib/overview";
 import { countdownText } from "@/lib/format";
+import type { ReactNode } from "react";
 
 export default function OverviewPage() {
   const t = useTranslations("overview");
@@ -49,11 +50,15 @@ export default function OverviewPage() {
 
   if (accounts === null) {
     return (
-      <div className="space-y-4">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-24 rounded-xl" data-testid="kpi-band" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-48 rounded-xl" />
+            <Skeleton key={i} className="h-48 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -66,14 +71,17 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <div>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{tRoot("app.description")}</p>
+      </div>
       {error ? (
         <Card>
           <CardContent className="py-6 text-sm text-destructive">{t("loadFailed")}</CardContent>
         </Card>
       ) : null}
       {accounts.length === 0 && !error ? (
-        <Empty className="rounded-xl border border-border">
+        <Empty className="rounded-2xl border border-border">
           <EmptyHeader>
             <EmptyTitle>{t("empty")}</EmptyTitle>
           </EmptyHeader>
@@ -85,35 +93,37 @@ export default function OverviewPage() {
       ) : (
         <>
           {accounts.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-3" data-testid="kpi-band">
-              <StatCard
-                label={t("kpiAccounts")}
-                value={String(kpis.enabledTotal)}
-                sub={
-                  kpis.errorCount > 0
-                    ? t("kpiErrors", { count: kpis.errorCount })
-                    : t("kpiAllOk")
-                }
-              />
-              <StatCard
-                label={t("kpiTightest")}
-                value={kpis.tightest ? `${kpis.tightest.window.remainingPct!.toFixed(0)}%` : "—"}
-                sub={
-                  kpis.tightest
-                    ? `${kpis.tightest.account.providerName} · ${kpis.tightest.account.label} · ${windowName(kpis.tightest.window)}`
-                    : undefined
-                }
-              />
-              <StatCard
-                label={t("kpiNextReset")}
-                value={countdownText(kpis.nextReset?.window.resetAt, tTime) ?? "—"}
-                sub={
-                  kpis.nextReset
-                    ? `${kpis.nextReset.account.providerName} · ${windowName(kpis.nextReset.window)}`
-                    : undefined
-                }
-              />
-            </div>
+            <Card data-testid="kpi-band">
+              <CardContent className="grid grid-cols-1 divide-y divide-border p-0 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <StatCell
+                  label={t("kpiAccounts")}
+                  value={String(kpis.enabledTotal)}
+                  sub={
+                    kpis.errorCount > 0
+                      ? t("kpiErrors", { count: kpis.errorCount })
+                      : t("kpiAllOk")
+                  }
+                />
+                <StatCell
+                  label={t("kpiTightest")}
+                  value={kpis.tightest ? `${kpis.tightest.window.remainingPct!.toFixed(0)}%` : "—"}
+                  sub={
+                    kpis.tightest
+                      ? `${kpis.tightest.account.providerName} · ${kpis.tightest.account.label} · ${windowName(kpis.tightest.window)}`
+                      : undefined
+                  }
+                />
+                <StatCell
+                  label={t("kpiNextReset")}
+                  value={countdownText(kpis.nextReset?.window.resetAt, tTime) ?? "—"}
+                  sub={
+                    kpis.nextReset
+                      ? `${kpis.nextReset.account.providerName} · ${windowName(kpis.nextReset.window)}`
+                      : undefined
+                  }
+                />
+              </CardContent>
+            </Card>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {sortAccountsByUrgency(accounts).map((account) => (
@@ -126,14 +136,12 @@ export default function OverviewPage() {
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatCell({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <Card data-testid="kpi-card">
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-1 font-heading text-2xl font-semibold tabular-nums">{value}</p>
-        {sub ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p> : null}
-      </CardContent>
-    </Card>
+    <div data-testid="kpi-card" className="p-4 sm:p-5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-heading text-xl font-semibold leading-snug tabular-nums sm:text-2xl">{value}</p>
+      {sub ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p> : null}
+    </div>
   );
 }

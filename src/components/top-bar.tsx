@@ -5,8 +5,9 @@ import { useTheme } from "next-themes";
 import { useTransition, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, Moon, RefreshCw, Sun } from "lucide-react";
+import { Gauge, Menu, Moon, RefreshCw, Sun } from "lucide-react";
 import {
   Sheet,
   SheetTrigger,
@@ -14,15 +15,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+const NAV_ITEMS = [
+  { href: "/", key: "overview" as const },
+  { href: "/settings", key: "settings" as const },
+];
 
 /** 顶栏：产品名 + 语言/主题切换 + 全局刷新。cal.com 式克制灰阶。 */
 export function TopBar({ authEnabled }: { authEnabled: boolean }) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
+  const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const [refreshing, startRefresh] = useTransition();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   const switchLang = () => {
     const next = locale === "zh" ? "en" : "zh";
@@ -50,22 +60,33 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-md bg-primary font-heading text-sm font-semibold text-primary-foreground">
-            C
+          <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Gauge className="size-4" strokeWidth={2} />
           </span>
-          <span className="font-heading text-base font-semibold tracking-tight">Coding Plan Usage</span>
+          <span className="hidden font-heading text-sm font-semibold tracking-tight sm:inline">
+            Coding Plan Usage
+          </span>
         </Link>
-        <nav className="ml-4 hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
-          <Link href="/" className="transition-colors hover:text-foreground">
-            {t("overview")}
-          </Link>
-          <Link href="/settings" className="transition-colors hover:text-foreground">
-            {t("settings")}
-          </Link>
+        <nav className="hidden items-center gap-1 text-sm sm:flex">
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                isActive(item.href)
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              aria-current={isActive(item.href) ? "page" : undefined}
+            >
+              {t(item.key)}
+            </Link>
+          ))}
         </nav>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-1">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={<Button variant="ghost" size="icon-sm" className="sm:hidden" aria-label={t("menu")} />}
@@ -77,20 +98,21 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
                 <SheetTitle>{t("menu")}</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 p-4">
-                <Link
-                  href="/"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  {t("overview")}
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  {t("settings")}
-                </Link>
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={cn(
+                      "rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive(item.href)
+                        ? "bg-accent font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
+                  >
+                    {t(item.key)}
+                  </Link>
+                ))}
               </nav>
             </SheetPopup>
           </Sheet>
@@ -102,7 +124,7 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
             aria-label={t("refreshAll")}
           >
             <RefreshCw className={refreshing ? "animate-spin" : undefined} data-testid="refresh-all" />
-            <span className="hidden sm:inline">{t("refreshAll")}</span>
+            <span className="hidden md:inline">{t("refreshAll")}</span>
           </Button>
           <Button
             variant="ghost"

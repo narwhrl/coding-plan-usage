@@ -49,6 +49,7 @@ import { Progress, ProgressIndicator, ProgressTrack } from "@/components/ui/prog
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ChevronLeft } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -159,13 +160,17 @@ export default function AccountDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="sm" render={<Link href="/" />}>
-          ← {t("detail.back")}
+          <ChevronLeft />
+          {t("detail.back")}
         </Button>
-        <span className="flex size-9 items-center justify-center rounded-lg bg-muted font-heading text-sm font-semibold text-muted-foreground">
+        <span className="flex size-9 items-center justify-center rounded-lg border border-border bg-muted/50 font-heading text-sm font-semibold text-muted-foreground" aria-hidden>
           {monogram(account.providerName)}
         </span>
         <div className="min-w-0">
-          <h1 className="truncate font-heading text-xl font-semibold tracking-tight">{account.providerName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="truncate font-heading text-xl font-semibold tracking-tight">{account.providerName}</h1>
+            {!account.enabled ? <Badge variant="secondary">{t("overview.disabled")}</Badge> : null}
+          </div>
           <p className="truncate text-xs text-muted-foreground">{account.label}</p>
         </div>
         <div className="ms-auto flex items-center gap-2">
@@ -218,17 +223,28 @@ export default function AccountDetailPage() {
           <CardContent className="grid gap-3 sm:grid-cols-2">
             {display.windows.map((w, index) => {
               const unitLabel = t(`unit.${w.unit}`, { defaultValue: w.unit });
+              const value = windowValueText(w, unitLabel);
+              const pct = w.remainingPct;
               return (
-                <div key={index} className="rounded-lg border border-border p-3">
-                  <p className="text-sm font-medium">
-                    {w.label ?? t(`window.${w.kind}`, { defaultValue: w.kind })}
-                  </p>
-                  <p className="mt-1 text-lg tabular-nums">
-                    {w.remainingPct !== undefined ? `${w.remainingPct.toFixed(1)}%` : ""}{" "}
-                    <span className="text-sm text-muted-foreground">{windowValueText(w, unitLabel)}</span>
-                  </p>
+                <div key={index} className="space-y-2 rounded-lg bg-muted/40 p-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm font-medium">
+                      {w.label ?? t(`window.${w.kind}`, { defaultValue: w.kind })}
+                    </p>
+                    <p className="shrink-0 text-sm tabular-nums">
+                      {pct !== undefined ? `${pct.toFixed(1)}%` : "—"}
+                      {value ? <span className="text-xs text-muted-foreground"> · {value}</span> : null}
+                    </p>
+                  </div>
+                  {pct !== undefined ? (
+                    <Progress value={Math.max(0, Math.min(100, pct))}>
+                      <ProgressTrack>
+                        <ProgressIndicator className={pct < account.warnThreshold ? "bg-destructive" : undefined} />
+                      </ProgressTrack>
+                    </Progress>
+                  ) : null}
                   {w.resetAt ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {t("overview.windowReset")}: {localDateTime(w.resetAt)}
                     </p>
                   ) : null}
@@ -310,7 +326,7 @@ export default function AccountDetailPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("detail.time")}</TableHead>
+                <TableHead className="w-44">{t("detail.time")}</TableHead>
                 <TableHead>{t("detail.values")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -321,8 +337,10 @@ export default function AccountDetailPage() {
                 .slice(0, 50)
                 .map((snap) => (
                   <TableRow key={snap.id}>
-                    <TableCell className="whitespace-nowrap text-xs">{localDateTime(snap.fetchedAt)}</TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="whitespace-nowrap py-2 text-xs text-muted-foreground">
+                      {localDateTime(snap.fetchedAt)}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs tabular-nums text-muted-foreground">
                       {(snap.windows ?? [])
                         .map((w) => {
                           const label = w.label ?? w.kind;

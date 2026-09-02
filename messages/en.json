@@ -108,6 +108,7 @@
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Add accounts, connect custom providers, and tune global defaults.",
     "tabAccounts": "Accounts",
     "tabCustom": "Custom providers",
     "tabGeneral": "General",
@@ -123,6 +124,7 @@
       "saving": "Saving…",
       "saved": "Saved; first fetch triggered",
       "list": "Existing accounts",
+      "disabled": "Disabled",
       "deleteConfirmTitle": "Delete account",
       "deleteConfirmBody": "This deletes the account and all of its snapshots.",
       "delete": "Delete",
