@@ -80,14 +80,14 @@ export default function LoginPage() {
                 </p>
               ) : null}
             </Field>
-            <Button type="submit" className="w-full" loading={busy} data-testid="login-submit">
-              {t("submit")}
+            <Button type="submit" className="w-full" disabled={busy} data-testid="login-submit">
+              {busy ? t("submitting") : t("submit")}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">{tApp("name")}</p>
+      <p className="text-xs text-muted-foreground">{tApp("footer")}</p>
     </div>
   );
 }

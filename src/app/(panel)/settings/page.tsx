@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
   AlertDialogViewport,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -27,13 +28,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
@@ -49,6 +45,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
+  const [accountsLoaded, setAccountsLoaded] = useState(false);
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
   const [generalSaved, setGeneralSaved] = useState(false);
@@ -74,6 +71,7 @@ export default function SettingsPage() {
         const data = (await settingsRes.json()) as { settings: GeneralSettings };
         if (!ignore) setSettings(data.settings);
       }
+      if (!ignore) setAccountsLoaded(true);
     }
 
     void load();
@@ -108,7 +106,19 @@ export default function SettingsPage() {
               <CardDescription>{t("accounts.listHint")}</CardDescription>
             </CardHeader>
             <CardContent>
-              {accounts.length === 0 ? (
+              {!accountsLoaded ? (
+                <ul className="divide-y divide-border" aria-hidden>
+                  {[0, 1, 2].map((i) => (
+                    <li key={i} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                      <Skeleton className="size-8 shrink-0 rounded-full" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : accounts.length === 0 ? (
                 <Empty className="py-8 md:py-10">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -124,53 +134,53 @@ export default function SettingsPage() {
                     <li key={account.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                       <ProviderMonogram name={account.providerName} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-sm font-medium">
-                          <Link
-                            href={`/accounts/${account.id}`}
-                            className="rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {account.providerName}
-                          </Link>
-                        </h3>
+                        <Link
+                          href={`/accounts/${account.id}`}
+                          className="block truncate text-sm font-medium hover:underline"
+                        >
+                          {account.providerName}
+                        </Link>
                         <p className="truncate text-xs text-muted-foreground">{account.label}</p>
                       </div>
-                      <AccountStatusBadges account={account} />
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={t("accounts.delete")}
-                              className="text-muted-foreground hover:text-destructive-foreground"
-                            />
-                          }
-                        >
-                          <Trash2 />
-                        </AlertDialogTrigger>
-                        <AlertDialogPortal>
-                          <AlertDialogBackdrop />
-                          <AlertDialogViewport>
-                            <AlertDialogPopup>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t("accounts.deleteConfirmTitle")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t("accounts.deleteConfirmBody")}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogClose>{t("accounts.cancel")}</AlertDialogClose>
-                                <AlertDialogClose
-                                  className="bg-destructive text-white hover:bg-destructive/90"
-                                  onClick={() => void removeAccount(account.id)}
-                                >
-                                  {t("accounts.delete")}
-                                </AlertDialogClose>
-                              </AlertDialogFooter>
-                            </AlertDialogPopup>
-                          </AlertDialogViewport>
-                        </AlertDialogPortal>
-                      </AlertDialog>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <AccountStatusBadges account={account} />
+                        <AlertDialog>
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t("accounts.delete")}
+                                className="text-muted-foreground hover:text-destructive-foreground"
+                              />
+                            }
+                          >
+                            <Trash2 />
+                          </AlertDialogTrigger>
+                          <AlertDialogPortal>
+                            <AlertDialogBackdrop />
+                            <AlertDialogViewport>
+                              <AlertDialogPopup>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t("accounts.deleteConfirmTitle")}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t("accounts.deleteConfirmBody")}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogClose>{t("accounts.cancel")}</AlertDialogClose>
+                                  <AlertDialogClose
+                                    render={<Button variant="destructive" />}
+                                    onClick={() => void removeAccount(account.id)}
+                                  >
+                                    {t("accounts.delete")}
+                                  </AlertDialogClose>
+                                </AlertDialogFooter>
+                              </AlertDialogPopup>
+                            </AlertDialogViewport>
+                          </AlertDialogPortal>
+                        </AlertDialog>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -210,7 +220,6 @@ function GeneralSettingsForm({
   onSavedChange: (saved: boolean) => void;
 }) {
   const t = useTranslations("settings.general");
-  const tCommon = useTranslations("common");
   const [interval, setIntervalValue] = useState(() => String(settings?.defaultIntervalMinutes ?? ""));
   const [warnPct, setWarnPct] = useState(() => String(settings?.warnPct ?? ""));
   const [busy, setBusy] = useState(false);
@@ -244,72 +253,48 @@ function GeneralSettingsForm({
   };
 
   return (
-    // 与「自定义提供商」页同宽：两个表单页宽度不一致时，切页签内容框会明显跳一下。
-    <Card className="max-w-3xl">
+    <Card className="max-w-2xl">
       <CardHeader>
         <CardTitle render={<h2 />} className="text-base">
           {t("title")}
         </CardTitle>
-        <CardDescription>{t("subtitle")}</CardDescription>
+        <CardDescription>{t("hint")}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        {/* 两个数字字段并排，和「添加账户」里的同一对字段保持一致；单列会让 2 位数的输入框拉满整行。 */}
-        <div className="grid grid-cols-2 gap-4">
-          {settings === null ? (
-            <>
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-            </>
-          ) : (
-            <>
-              <Field>
-                <FieldLabel htmlFor="general-interval">{t("defaultInterval")}</FieldLabel>
-                <InputGroup>
-                  <InputGroupInput
-                    id="general-interval"
-                    inputMode="numeric"
-                    value={interval}
-                    onValueChange={setIntervalValue}
-                    data-testid="general-interval"
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupText>{tCommon("minutes")}</InputGroupText>
-                  </InputGroupAddon>
-                </InputGroup>
-                <FieldDescription>{t("defaultIntervalHint")}</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
-                <InputGroup>
-                  <InputGroupInput
-                    id="general-warn"
-                    inputMode="numeric"
-                    value={warnPct}
-                    onValueChange={setWarnPct}
-                    data-testid="general-warn"
-                  />
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupText>%</InputGroupText>
-                  </InputGroupAddon>
-                </InputGroup>
-                <FieldDescription>{t("warnPctHint")}</FieldDescription>
-              </Field>
-            </>
-          )}
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="general-interval">{t("defaultInterval")}</FieldLabel>
+            <Input
+              id="general-interval"
+              inputMode="numeric"
+              value={interval}
+              onValueChange={setIntervalValue}
+              data-testid="general-interval"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
+            <Input
+              id="general-warn"
+              inputMode="numeric"
+              value={warnPct}
+              onValueChange={setWarnPct}
+              data-testid="general-warn"
+            />
+          </Field>
         </div>
         <Separator />
         <div className="flex items-center gap-3">
-          <Button onClick={save} loading={busy} disabled={!settings} data-testid="general-save">
-            {t("save")}
+          <Button onClick={save} disabled={busy || !settings} data-testid="general-save">
+            {busy ? t("saving") : t("save")}
           </Button>
           {saved ? (
-            <span className="flex items-center gap-1.5 text-sm text-success-foreground">
-              <Check className="size-4" aria-hidden="true" />
+            <Badge variant="success" data-testid="general-saved">
+              <Check />
               {t("saved")}
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </CardContent>
     </Card>
   );
