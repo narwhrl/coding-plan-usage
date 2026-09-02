@@ -1,0 +1,72 @@
+import type { AccountView, SnapshotView, Window } from "./types";
+
+/** 快照中数值型 remainingPct 最小的窗口；无数值窗口返回 null。 */
+export function tightestWindow(s: SnapshotView | null | undefined): Window | null {
+  if (!s) return null;
+  let best: Window | null = null;
+  for (const w of s.windows) {
+    const pct = w.remainingPct;
+    if (typeof pct !== "number") continue;
+    if (!best || (best.remainingPct as number) > pct) best = w;
+  }
+  return best;
+}
+
+/** 展示快照（lastOk ?? latest）全窗口最小数值 pct；无数值窗口返回 undefined。 */
+export function accountMinPct(a: AccountView): number | undefined {
+  const w = tightestWindow(a.lastOkSnapshot ?? a.latestSnapshot);
+  return w?.remainingPct;
+}
+
+/**
+ * 紧急排序：error(0) → warn(1) → 正常(2)，禁用(3) 沉底。
+ * 同 rank 内按 accountMinPct ?? Infinity 升序，平手保持原下标（error 与 warn 并存时 error 赢）。
+ */
+export function sortAccountsByUrgency(accounts: AccountView[]): AccountView[] {
+  const rank = (a: AccountView) =>
+    !a.enabled ? 3 : a.latestSnapshot?.status === "error" ? 0 : a.warn ? 1 : 2;
+  return accounts
+    .map((account, index) => ({ account, index, rank: rank(account), minPct: accountMinPct(account) }))
+    .sort((x, y) => {
+      if (x.rank !== y.rank) return x.rank - y.rank;
+      const diff = (x.minPct ?? Infinity) - (y.minPct ?? Infinity);
+      if (diff !== 0) return diff;
+      return x.index - y.index;
+    })
+    .map((e) => e.account);
+}
+
+export type OverviewKpis = {
+  enabledTotal: number;
+  errorCount: number;
+  /** 非 error 的 enabled 账户中全局最小 pct 的窗口。 */
+  tightest: { account: AccountView; window: Window } | null;
+  /** enabled 账户展示窗口中未来最近的一次重置；error 账户不参与 tightest，但经展示快照参与 nextReset。 */
+  nextReset: { account: AccountView; window: Window } | null;
+};
+
+/** KPI 汇总：只统计 enabled 账户。 */
+export function overviewKpis(accounts: AccountView[]): OverviewKpis {
+  const enabled = accounts.filter((a) => a.enabled);
+  const kpis: OverviewKpis = { enabledTotal: enabled.length, errorCount: 0, tightest: null, nextReset: null };
+  let tightestPct = Infinity;
+  let nextResetMs = Infinity;
+  for (const account of enabled) {
+    const errored = account.latestSnapshot?.status === "error";
+    if (errored) kpis.errorCount += 1;
+    const display = account.lastOkSnapshot ?? account.latestSnapshot;
+    for (const w of display?.windows ?? []) {
+      const pct = w.remainingPct;
+      if (!errored && typeof pct === "number" && pct < tightestPct) {
+        tightestPct = pct;
+        kpis.tightest = { account, window: w };
+      }
+      const resetMs = w.resetAt ? Date.parse(w.resetAt) : NaN;
+      if (Number.isFinite(resetMs) && resetMs > Date.now() && resetMs < nextResetMs) {
+        nextResetMs = resetMs;
+        kpis.nextReset = { account, window: w };
+      }
+    }
+  }
+  return kpis;
+}

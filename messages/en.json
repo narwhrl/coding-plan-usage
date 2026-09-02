@@ -36,7 +36,14 @@
     "windowReset": "Resets",
     "lowQuota": "Low quota",
     "remaining": "Remaining",
-    "never": "never"
+    "never": "never",
+    "loadFailed": "Load failed",
+    "kpiAccounts": "Accounts",
+    "kpiErrors": "{count, plural, =1 {# error} other {# errors}}",
+    "kpiAllOk": "All healthy",
+    "kpiTightest": "Tightest quota",
+    "kpiNextReset": "Next reset",
+    "trend": "Tightest value, last 7 days"
   },
   "window": {
     "5h": "5-hour window",

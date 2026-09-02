@@ -11,13 +11,19 @@ import { Progress, ProgressIndicator, ProgressTrack } from "@/components/ui/prog
 import { RefreshCw, TriangleAlert } from "lucide-react";
 import type { AccountView, Window } from "@/lib/types";
 import { countdownText, monogram, relativeTime, windowValueText } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { tightestWindow } from "@/lib/overview";
+import { Sparkline } from "@/components/sparkline";
 
 export function AccountCard({ account, onRefreshed }: { account: AccountView; onRefreshed?: () => void }) {
   const t = useTranslations();
+  const tTime = useTranslations("time");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const display = account.lastOkSnapshot ?? account.latestSnapshot;
   const isError = account.latestSnapshot?.status === "error";
+  const hero = tightestWindow(display);
+  const heroReset = countdownText(hero?.resetAt, tTime);
 
   const refresh = async () => {
     setBusy(true);
@@ -36,7 +42,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         isError
           ? "border-destructive/60 transition-colors"
           : account.enabled
-            ? "transition-colors"
+            ? "transition-[border-color,box-shadow] hover:shadow-xs"
             : "opacity-60 transition-colors"
       }
       data-testid="account-card"
@@ -80,11 +86,42 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
             {account.latestSnapshot?.error ?? "error"}
           </p>
         ) : null}
+        {hero && typeof hero.remainingPct === "number" ? (
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-xs text-muted-foreground">
+                {hero.label ?? t(`window.${hero.kind}`, { defaultValue: hero.kind })}
+              </p>
+              <p
+                className={cn(
+                  "font-heading text-3xl font-semibold tabular-nums",
+                  hero.remainingPct < account.warnThreshold && "text-destructive",
+                )}
+                data-testid="hero-pct"
+              >
+                {hero.remainingPct.toFixed(0)}%
+              </p>
+              {hero.remaining !== undefined || hero.used !== undefined ? (
+                <p className="truncate text-xs tabular-nums text-muted-foreground">
+                  {windowValueText(hero, t(`unit.${hero.unit}`, { defaultValue: hero.unit }))}
+                </p>
+              ) : null}
+              {heroReset ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("overview.windowReset")}: {heroReset}
+                </p>
+              ) : null}
+            </div>
+            <Sparkline points={account.spark ?? []} />
+          </div>
+        ) : null}
         {display && display.windows.length > 0 ? (
           <div className="space-y-3">
-            {display.windows.map((w, index) => (
-              <WindowRow key={index} w={w} warnPct={account.warnThreshold} />
-            ))}
+            {display.windows
+              .filter((w) => w !== hero)
+              .map((w, index) => (
+                <WindowRow key={index} w={w} warnPct={account.warnThreshold} />
+              ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">{t("overview.noData")}</p>
@@ -99,9 +136,10 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
 
 function WindowRow({ w, warnPct }: { w: Window; warnPct: number }) {
   const t = useTranslations();
+  const tTime = useTranslations("time");
   const pct = w.remainingPct;
   const unitLabel = t(`unit.${w.unit}`, { defaultValue: w.unit });
-  const reset = countdownText(w.resetAt, t);
+  const reset = countdownText(w.resetAt, tTime);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-sm">

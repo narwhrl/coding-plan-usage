@@ -9,9 +9,13 @@ import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/em
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountCard } from "@/components/account-card";
 import type { AccountView } from "@/lib/types";
+import { overviewKpis, sortAccountsByUrgency } from "@/lib/overview";
+import { countdownText } from "@/lib/format";
 
 export default function OverviewPage() {
   const t = useTranslations("overview");
+  const tRoot = useTranslations();
+  const tTime = useTranslations("time");
   const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [error, setError] = useState(false);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
@@ -56,12 +60,16 @@ export default function OverviewPage() {
     );
   }
 
+  const kpis = overviewKpis(accounts);
+  const windowName = (w: { label?: string; kind: string }) =>
+    w.label ?? tRoot(`window.${w.kind}`, { defaultValue: w.kind });
+
   return (
     <div className="space-y-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
       {error ? (
         <Card>
-          <CardContent className="py-6 text-sm text-destructive">load failed</CardContent>
+          <CardContent className="py-6 text-sm text-destructive">{t("loadFailed")}</CardContent>
         </Card>
       ) : null}
       {accounts.length === 0 && !error ? (
@@ -75,12 +83,57 @@ export default function OverviewPage() {
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <AccountCard key={account.id} account={account} onRefreshed={requestRefresh} />
-          ))}
-        </div>
+        <>
+          {accounts.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-3" data-testid="kpi-band">
+              <StatCard
+                label={t("kpiAccounts")}
+                value={String(kpis.enabledTotal)}
+                sub={
+                  kpis.errorCount > 0
+                    ? t("kpiErrors", { count: kpis.errorCount })
+                    : t("kpiAllOk")
+                }
+              />
+              <StatCard
+                label={t("kpiTightest")}
+                value={kpis.tightest ? `${kpis.tightest.window.remainingPct!.toFixed(0)}%` : "—"}
+                sub={
+                  kpis.tightest
+                    ? `${kpis.tightest.account.providerName} · ${kpis.tightest.account.label} · ${windowName(kpis.tightest.window)}`
+                    : undefined
+                }
+              />
+              <StatCard
+                label={t("kpiNextReset")}
+                value={countdownText(kpis.nextReset?.window.resetAt, tTime) ?? "—"}
+                sub={
+                  kpis.nextReset
+                    ? `${kpis.nextReset.account.providerName} · ${windowName(kpis.nextReset.window)}`
+                    : undefined
+                }
+              />
+            </div>
+          ) : null}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {sortAccountsByUrgency(accounts).map((account) => (
+              <AccountCard key={account.id} account={account} onRefreshed={requestRefresh} />
+            ))}
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <Card data-testid="kpi-card">
+      <CardContent className="p-4">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-1 font-heading text-2xl font-semibold tabular-nums">{value}</p>
+        {sub ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p> : null}
+      </CardContent>
+    </Card>
   );
 }
