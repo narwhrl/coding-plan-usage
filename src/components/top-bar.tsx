@@ -2,11 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Moon, RefreshCw, Sun } from "lucide-react";
+import { Menu, Moon, RefreshCw, Sun } from "lucide-react";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetPopup,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 /** 顶栏：产品名 + 语言/主题切换 + 全局刷新。cal.com 式克制灰阶。 */
 export function TopBar({ authEnabled }: { authEnabled: boolean }) {
@@ -15,6 +22,7 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [refreshing, startRefresh] = useTransition();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const switchLang = () => {
     const next = locale === "zh" ? "en" : "zh";
@@ -58,6 +66,34 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger
+              render={<Button variant="ghost" size="icon-sm" className="sm:hidden" aria-label={t("menu")} />}
+            >
+              <Menu />
+            </SheetTrigger>
+            <SheetPopup side="right" className="w-72" closeProps={{ "aria-label": t("close") }}>
+              <SheetHeader className="sr-only">
+                <SheetTitle>{t("menu")}</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 p-4">
+                <Link
+                  href="/"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {t("overview")}
+                </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {t("settings")}
+                </Link>
+              </nav>
+            </SheetPopup>
+          </Sheet>
           <Button
             variant="ghost"
             size="sm"

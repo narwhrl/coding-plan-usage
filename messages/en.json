@@ -1,18 +1,21 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "LLM plan usage panel"
+    "description": "LLM plan usage panel",
+    "footer": "Self-hosted · SQLite snapshots"
   },
   "nav": {
     "overview": "Overview",
     "settings": "Settings",
+    "menu": "Menu",
     "logout": "Log out",
     "language": "Language",
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
-    "refreshAll": "Refresh all"
+    "refreshAll": "Refresh all",
+    "close": "Close"
   },
   "login": {
     "title": "Access password",

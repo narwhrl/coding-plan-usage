@@ -1,18 +1,21 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "LLM 订阅配额面板"
+    "description": "LLM 订阅配额面板",
+    "footer": "自托管 · SQLite 快照"
   },
   "nav": {
     "overview": "概览",
     "settings": "设置",
+    "menu": "菜单",
     "logout": "退出登录",
     "language": "语言",
     "theme": "主题",
     "themeLight": "浅色",
     "themeDark": "深色",
     "themeSystem": "跟随系统",
-    "refreshAll": "全部刷新"
+    "refreshAll": "全部刷新",
+    "close": "关闭"
   },
   "login": {
     "title": "访问口令",
