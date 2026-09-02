@@ -18,13 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AccountView, CredentialFieldView } from "@/lib/types";
 
-/** 账户编辑弹窗：凭证留空即保持原值（后端不回传明文）。 */
+/** 账户编辑弹窗：标签/采集间隔/预警阈值/API 地址/启停 + 凭证（留空保持不变）。 */
 export function EditAccountDialog({
   account,
   fields,
@@ -39,7 +37,6 @@ export function EditAccountDialog({
   onSaved: () => void;
 }) {
   const t = useTranslations("detail");
-  const tCommon = useTranslations("common");
   const [label, setLabel] = useState(account.label);
   const [interval, setIntervalValue] = useState(account.config.intervalMinutes?.toString() ?? "");
   const [warnPct, setWarnPct] = useState(account.config.warnPct?.toString() ?? "");
@@ -86,9 +83,7 @@ export function EditAccountDialog({
           <DialogPopup>
             <DialogHeader>
               <DialogTitle>{t("edit")}</DialogTitle>
-              <DialogDescription>
-                {account.providerName} · {account.label}
-              </DialogDescription>
+              <DialogDescription>{account.providerName}</DialogDescription>
             </DialogHeader>
             <DialogPanel className="grid gap-4">
               <Field>
@@ -98,39 +93,19 @@ export function EditAccountDialog({
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="edit-interval">{t("interval")}</FieldLabel>
-                  <InputGroup>
-                    <InputGroupInput
-                      id="edit-interval"
-                      inputMode="numeric"
-                      value={interval}
-                      onValueChange={setIntervalValue}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupText>{tCommon("minutes")}</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
+                  <Input id="edit-interval" inputMode="numeric" value={interval} onValueChange={setIntervalValue} />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="edit-warn">{t("warnPct")}</FieldLabel>
-                  <InputGroup>
-                    <InputGroupInput
-                      id="edit-warn"
-                      inputMode="numeric"
-                      value={warnPct}
-                      onValueChange={setWarnPct}
-                    />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupText>%</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
+                  <Input id="edit-warn" inputMode="numeric" value={warnPct} onValueChange={setWarnPct} />
                 </Field>
               </div>
               <Field>
                 <FieldLabel htmlFor="edit-baseurl">{t("baseUrl")}</FieldLabel>
                 <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
               </Field>
-              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
-                <Label htmlFor="edit-enabled">{t("enabled")}</Label>
+              <div className="flex items-center justify-between">
+                <FieldLabel htmlFor="edit-enabled">{t("enabled")}</FieldLabel>
                 <Switch id="edit-enabled" checked={enabled} onCheckedChange={setEnabled} />
               </div>
               {fields.length > 0 ? (
@@ -153,12 +128,11 @@ export function EditAccountDialog({
                     <Input
                       id={`edit-cred-${field.key}`}
                       type="password"
-                      autoComplete="off"
                       value={credentialValues[field.key] ?? ""}
                       onValueChange={(value) =>
                         setCredentialValues((prev) => ({ ...prev, [field.key]: value }))
                       }
-                      placeholder={field.placeholder}
+                      placeholder="—"
                     />
                   )}
                 </Field>
@@ -166,8 +140,8 @@ export function EditAccountDialog({
             </DialogPanel>
             <DialogFooter>
               <DialogClose>{t("cancel")}</DialogClose>
-              <Button onClick={save} loading={busy}>
-                {t("save")}
+              <Button onClick={save} disabled={busy}>
+                {busy ? t("saving") : t("save")}
               </Button>
             </DialogFooter>
           </DialogPopup>

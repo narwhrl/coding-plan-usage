@@ -1,8 +1,9 @@
 import type { Window } from "./types";
 
-/** next-intl 的 t 在纯函数里的最小签名（has 用于缺词条回退）。 */
-export type Translate = ((key: string, values?: Record<string, string | number | Date>) => string) & {
-  has?: (key: string) => boolean;
+/** next-intl 翻译函数的最小形状：windowName/unitName 只需要 has + 取值。 */
+export type Translator = {
+  (key: string, values?: Record<string, string | number | Date>): string;
+  has: (key: string) => boolean;
 };
 
 /** 紧凑数字：1234567 → 1.23M；保留必要精度。 */
@@ -15,43 +16,63 @@ export function compactNumber(value: number): string {
   return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
-/** 百分比文本；无数值返回 null，由调用方决定占位。 */
-export function windowPctText(w: Window, digits = 0): string | null {
-  return w.remainingPct === undefined ? null : `${w.remainingPct.toFixed(digits)}%`;
+/**
+ * 本地化窗口名：优先窗口自带 label；`window.<kind>` 词条不存在时（自定义提供商的
+ * kind 不在词条表里）回退为 kind 原文。next-intl 没有 defaultValue，必须用 has() 判断，
+ * 否则会把 `window.<kind>` 原样渲染出来。
+ */
+export function windowName(w: { kind: string; label?: string }, t: Translator): string {
+  if (w.label) return w.label;
+  const key = `window.${w.kind}`;
+  return t.has(key) ? t(key) : w.kind;
+}
+
+/** 本地化单位名，同样用 has() 兜底。 */
+export function unitName(unit: string, t: Translator): string {
+  const key = `unit.${unit}`;
+  return t.has(key) ? t(key) : unit;
+}
+
+/** 窗口主显示值：优先 remaining，否则 used/total。 */
+export function windowValueText(w: Window, unitLabel: string): string {
+  const parts: string[] = [];
+  if (w.remaining !== undefined) parts.push(compactNumber(w.remaining));
+  if (w.used !== undefined) parts.push(`${compactNumber(w.used)} / ${w.total !== undefined ? compactNumber(w.total) : "?"}`);
+  if (parts.length === 0 && w.remainingPct !== undefined) parts.push(`${w.remainingPct.toFixed(0)}%`);
+  return parts.length > 0 ? parts.join(" · ") + (unitLabel ? ` ${unitLabel}` : "") : "—";
+}
+
+/** 窗口百分比读数：无 remainingPct 时返回 null（调用方改显示绝对量）。 */
+export function windowPctText(w: Window): string | null {
+  return w.remainingPct !== undefined ? `${w.remainingPct.toFixed(0)}%` : null;
 }
 
 /**
- * 窗口的绝对量文本（remaining 或 used/total），不含百分比。
- * percent 单位的窗口只有百分比信息，返回 null，避免与 windowPctText 重复渲染成 "45% 45% %"。
+ * 窗口绝对量读数：percent 单位返回 null（与 windowPctText 拼在一起会渲染出「45% 45%」）。
+ * 没有可显示的绝对量时也返回 null。
  */
 export function windowAmountText(w: Window, unitLabel: string): string | null {
   if (w.unit === "percent") return null;
-  // 百分比语义始终是「剩余」，所以有 remaining 就按剩余/总量呈现，避免和 used 混读。
-  let amount: string | null = null;
-  if (w.remaining !== undefined) {
-    amount =
-      w.total !== undefined
-        ? `${compactNumber(w.remaining)} / ${compactNumber(w.total)}`
-        : compactNumber(w.remaining);
-  } else if (w.used !== undefined) {
-    amount = `${compactNumber(w.used)} / ${w.total !== undefined ? compactNumber(w.total) : "?"}`;
-  }
-  if (amount === null) return null;
-  return unitLabel ? `${amount} ${unitLabel}` : amount;
+  const parts: string[] = [];
+  if (w.remaining !== undefined) parts.push(compactNumber(w.remaining));
+  if (w.used !== undefined) parts.push(`${compactNumber(w.used)} / ${w.total !== undefined ? compactNumber(w.total) : "?"}`);
+  return parts.length > 0 ? `${parts.join(" · ")}${unitLabel ? ` ${unitLabel}` : ""}` : null;
 }
 
-/** 额度紧张度分级：低于阈值 critical，低于阈值 2 倍（最多 50%）warning。 */
+/** 额度紧张度分级：全站唯一判定入口，QuotaBar/读数/sparkline/KPI 都从这里取色。 */
 export type QuotaTone = "critical" | "warning" | "normal";
 
-export function quotaTone(pct: number | undefined, warnPct: number): QuotaTone {
-  if (pct === undefined) return "normal";
+export function quotaTone(pct: number, warnPct: number): QuotaTone {
   if (pct < warnPct) return "critical";
   if (pct < Math.min(warnPct * 2, 50)) return "warning";
   return "normal";
 }
 
 /** resetAt → 人读倒计时（<1h 分钟，<48h 小时，其余天）。 */
-export function countdownText(resetAt: string | null | undefined, t: Translate): string | null {
+export function countdownText(
+  resetAt: string | null | undefined,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+): string | null {
   if (!resetAt) return null;
   const ms = Date.parse(resetAt);
   if (!Number.isFinite(ms)) return null;
@@ -65,42 +86,58 @@ export function countdownText(resetAt: string | null | undefined, t: Translate):
 }
 
 /**
- * 窗口重置时刻的人读文本：未来给倒计时，已过去给「n 分钟前」。
- * 采集有间隔，快照里的 resetAt 可能已经过期；那时说「0 分钟后」是假的。
+ * 窗口重置时刻：采集有间隔，快照里的 resetAt 可能已经过期，那时要说「1 小时前」
+ * 而不是「0 分钟后」。只有确定筛过未来时间的地方（KPI 的 nextReset）才直接用 countdownText。
  */
-export function resetText(resetAt: string | null | undefined, t: Translate): string | null {
+export function resetText(
+  resetAt: string | null | undefined,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+): string | null {
   if (!resetAt) return null;
   const ms = Date.parse(resetAt);
   if (!Number.isFinite(ms)) return null;
-  return ms > Date.now() ? countdownText(resetAt, t) : relativeTimeText(resetAt, t);
+  if (ms > Date.now()) return countdownText(resetAt, t);
+  return relativeTimeText(resetAt, t);
 }
 
-/** 相对过去时间，本地化（t 绑定到 time 命名空间）。 */
-export function relativeTimeText(iso: string | null | undefined, t: Translate): string | null {
+/** 本地化相对时间（「3 分钟前」）。 */
+export function relativeTimeText(
+  iso: string | null | undefined,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+): string | null {
   if (!iso) return null;
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return null;
-  const minutes = Math.round((Date.now() - ms) / 60000);
+  const diff = Date.now() - ms;
+  const minutes = Math.round(diff / 60000);
   if (minutes < 1) return t("justNow");
-  if (minutes < 60) return t("ago", { time: t("minutes", { count: minutes }) });
+  if (minutes < 60) return t("minutesAgo", { count: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return t("ago", { time: t("hours", { count: hours }) });
-  return t("ago", { time: t("days", { count: Math.round(hours / 24) }) });
+  if (hours < 24) return t("hoursAgo", { count: hours });
+  return t("daysAgo", { count: Math.round(hours / 24) });
+}
+
+/** @deprecated 英文紧凑相对时间，保留给未迁移的调用方；新代码用 relativeTimeText。 */
+export function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return "—";
+  const diff = Date.now() - ms;
+  const minutes = Math.round(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
 }
 
 export function localDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString();
-}
-
-/** 图表轴 / 表格用的紧凑时间："9/2 14:00"，locale 感知但不含年与秒。 */
-export function shortDateTime(iso: string | null | undefined, locale?: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString(locale, {
+  // 不带秒：秒级精度对采集快照没有信息量，还挤占表格宽度。
+  return date.toLocaleString(undefined, {
+    year: "numeric",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -108,28 +145,18 @@ export function shortDateTime(iso: string | null | undefined, locale?: string): 
   });
 }
 
-/** 只要时钟部分："14:00"。 */
-export function shortTime(iso: string | null | undefined, locale?: string): string {
-  if (!iso) return "—";
+/** 短时间（HH:mm），24h 视图的横轴刻度用。 */
+export function shortTime(iso: string, locale: string): string {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
 }
 
-/**
- * 窗口显示名：优先适配器给的 label，其次 window.<kind> 词条，最后裸 kind。
- * 自定义提供商的 kind 不在词条表里，所以必须走 t.has 判断，不能直接 t()。
- */
-export function windowName(w: Pick<Window, "kind" | "label">, t: Translate): string {
-  if (w.label) return w.label;
-  const key = `window.${w.kind}`;
-  return t.has?.(key) ? t(key) : w.kind;
-}
-
-/** 单位显示名：unit.<unit> 词条，缺失回退裸值。 */
-export function unitName(unit: string, t: Translate): string {
-  const key = `unit.${unit}`;
-  return t.has?.(key) ? t(key) : unit;
+/** 短日期时间（M月d日 HH:mm 风格），多天视图的横轴刻度用。 */
+export function shortDateTime(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 /** 提供商 monogram：名称前两个字母（大写）。 */
