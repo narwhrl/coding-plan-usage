@@ -27,6 +27,7 @@
   },
   "overview": {
     "title": "账户概览",
+    "subtitle": "各提供商账户的额度余量一览",
     "empty": "还没有账户",
     "emptyHint": "去设置里添加第一个提供商账户",
     "goSettings": "前往设置",
@@ -93,6 +94,9 @@
     "enabled": "启用",
     "credentials": "凭证（留空保持不变）",
     "noSnapshots": "暂无成功快照",
+    "notFound": "未找到账户",
+    "notFoundHint": "该账户可能已被删除，返回概览查看现有账户。",
+    "backToOverview": "返回概览",
     "usage": {
       "title": "用量",
       "tokens": "词元",
@@ -160,6 +164,7 @@
       "apiKeyForAccount": "API Key"
     },
     "general": {
+      "title": "通用设置",
       "defaultInterval": "默认采集间隔（分钟）",
       "warnPct": "全局预警阈值（%）",
       "save": "保存",
@@ -175,7 +180,8 @@
     "confirm": "确认",
     "optional": "可选",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "skipToContent": "跳到主要内容"
   },
   "time": {
     "inMinutes": "{count} 分钟后",

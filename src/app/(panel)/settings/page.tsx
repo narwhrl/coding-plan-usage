@@ -22,16 +22,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
 import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
+import { monogram } from "@/lib/format";
 import { AccountAddForm } from "@/components/account-add-form";
 import { CustomProviderForm } from "@/components/custom-provider-form";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const tRoot = useTranslations();
   const router = useRouter();
   const [providers, setProviders] = useState<ProviderView[]>([]);
-  const [accounts, setAccounts] = useState<AccountView[]>([]);
+  const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
   const [generalSaved, setGeneralSaved] = useState(false);
@@ -88,7 +91,9 @@ export default function SettingsPage() {
               <CardTitle className="text-base">{t("accounts.list")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {accounts.length === 0 ? (
+              {accounts === null ? (
+                Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)
+              ) : accounts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("accounts.empty")}</p>
               ) : (
                 accounts.map((account) => (
@@ -96,11 +101,16 @@ export default function SettingsPage() {
                     key={account.id}
                     className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
                   >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted font-heading text-xs font-semibold text-muted-foreground">
+                      {monogram(account.providerName)}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{account.providerName}</p>
                       <p className="truncate text-xs text-muted-foreground">{account.label}</p>
                     </div>
-                    {!account.enabled ? <Badge variant="secondary">disabled</Badge> : null}
+                    {!account.enabled ? (
+                      <Badge variant="secondary">{tRoot("overview.disabled")}</Badge>
+                    ) : null}
                     <AlertDialog>
                       <AlertDialogTrigger render={<Button variant="ghost" size="sm" />}>
                         {t("accounts.delete")}
@@ -116,7 +126,7 @@ export default function SettingsPage() {
                             <AlertDialogFooter>
                               <AlertDialogClose>{t("accounts.cancel")}</AlertDialogClose>
                               <AlertDialogClose
-                                className="bg-destructive text-white hover:bg-destructive/90"
+                                render={<Button variant="destructive" />}
                                 onClick={() => void removeAccount(account.id)}
                               >
                                 {t("accounts.delete")}
@@ -138,13 +148,25 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="general">
-          <GeneralSettingsForm
-            key={settings ? `${settings.defaultIntervalMinutes}:${settings.warnPct}` : "loading"}
-            settings={settings}
-            onSaved={requestRefresh}
-            saved={generalSaved}
-            onSavedChange={setGeneralSaved}
-          />
+          {settings === null ? (
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="text-base">{t("general.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-full" />
+              </CardContent>
+            </Card>
+          ) : (
+            <GeneralSettingsForm
+              key={`${settings.defaultIntervalMinutes}:${settings.warnPct}`}
+              settings={settings}
+              onSaved={requestRefresh}
+              saved={generalSaved}
+              onSavedChange={setGeneralSaved}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

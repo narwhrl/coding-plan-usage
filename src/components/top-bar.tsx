@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useTransition, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -14,12 +14,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 /** 顶栏：产品名 + 语言/主题切换 + 全局刷新。cal.com 式克制灰阶。 */
 export function TopBar({ authEnabled }: { authEnabled: boolean }) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
+  const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const [refreshing, startRefresh] = useTransition();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,6 +50,11 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
     router.refresh();
   };
 
+  const navItems = [
+    { href: "/", label: t("overview"), active: pathname === "/" || pathname.startsWith("/accounts") },
+    { href: "/settings", label: t("settings"), active: pathname.startsWith("/settings") },
+  ];
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
@@ -57,13 +64,22 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           </span>
           <span className="font-heading text-base font-semibold tracking-tight">Coding Plan Usage</span>
         </Link>
-        <nav className="ml-4 hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
-          <Link href="/" className="transition-colors hover:text-foreground">
-            {t("overview")}
-          </Link>
-          <Link href="/settings" className="transition-colors hover:text-foreground">
-            {t("settings")}
-          </Link>
+        <nav className="ml-4 hidden items-center gap-1 text-sm sm:flex">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={item.active ? "page" : undefined}
+              className={cn(
+                "rounded-md px-2.5 py-1.5 transition-colors",
+                item.active
+                  ? "bg-accent font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -77,20 +93,22 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
                 <SheetTitle>{t("menu")}</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 p-4">
-                <Link
-                  href="/"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  {t("overview")}
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  {t("settings")}
-                </Link>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    aria-current={item.active ? "page" : undefined}
+                    className={cn(
+                      "rounded-md px-3 py-2 text-sm transition-colors",
+                      item.active
+                        ? "bg-accent font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </nav>
             </SheetPopup>
           </Sheet>

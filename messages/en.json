@@ -27,6 +27,7 @@
   },
   "overview": {
     "title": "Accounts",
+    "subtitle": "Quota remaining across your provider accounts",
     "empty": "No accounts yet",
     "emptyHint": "Add your first provider account in settings",
     "goSettings": "Go to settings",
@@ -93,6 +94,9 @@
     "enabled": "Enabled",
     "credentials": "Credentials (leave empty to keep)",
     "noSnapshots": "No successful snapshots yet",
+    "notFound": "Account not found",
+    "notFoundHint": "It may have been deleted. Head back to the overview to see your accounts.",
+    "backToOverview": "Back to overview",
     "usage": {
       "title": "Usage",
       "tokens": "Tokens",
@@ -160,6 +164,7 @@
       "apiKeyForAccount": "API Key"
     },
     "general": {
+      "title": "General settings",
       "defaultInterval": "Default interval (minutes)",
       "warnPct": "Global warn threshold (%)",
       "save": "Save",
@@ -175,7 +180,8 @@
     "confirm": "Confirm",
     "optional": "optional",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "skipToContent": "Skip to content"
   },
   "time": {
     "inMinutes": "in {count} min",

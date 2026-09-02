@@ -15,6 +15,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { CircleOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -31,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import {
   Dialog,
   DialogBackdrop,
@@ -84,6 +86,7 @@ export default function AccountDetailPage() {
   const t = useTranslations();
   const router = useRouter();
   const [account, setAccount] = useState<AccountView | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [history, setHistory] = useState<HistorySnapshot[] | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [editOpen, setEditOpen] = useState(false);
@@ -102,6 +105,7 @@ export default function AccountDetailPage() {
         const data = (await accountsRes.json()) as { accounts: AccountView[] };
         if (!ignore) setAccount(data.accounts.find((item) => item.id === id) ?? null);
       }
+      if (!ignore) setLoaded(true);
       if (historyRes.ok) {
         const data = (await historyRes.json()) as { snapshots: HistorySnapshot[] };
         if (!ignore) setHistory(data.snapshots);
@@ -140,12 +144,32 @@ export default function AccountDetailPage() {
     });
   }, [history]);
 
+  const hasBalance = useMemo(() => (history ?? []).some((snap) => snap.balance != null), [history]);
+
   if (!account) {
+    if (!loaded) {
+      return (
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      );
+    }
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 rounded-xl" />
-      </div>
+      <Empty className="rounded-xl border border-border" data-testid="account-not-found">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CircleOff />
+          </EmptyMedia>
+          <EmptyTitle>{t("detail.notFound")}</EmptyTitle>
+          <EmptyDescription>{t("detail.notFoundHint")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant="outline" render={<Link href="/" />}>
+            {t("detail.backToOverview")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
@@ -165,7 +189,10 @@ export default function AccountDetailPage() {
           {monogram(account.providerName)}
         </span>
         <div className="min-w-0">
-          <h1 className="truncate font-heading text-xl font-semibold tracking-tight">{account.providerName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="truncate font-heading text-xl font-semibold tracking-tight">{account.providerName}</h1>
+            {!account.enabled ? <Badge variant="secondary">{t("overview.disabled")}</Badge> : null}
+          </div>
           <p className="truncate text-xs text-muted-foreground">{account.label}</p>
         </div>
         <div className="ms-auto flex items-center gap-2">
@@ -187,7 +214,7 @@ export default function AccountDetailPage() {
                   <AlertDialogFooter>
                     <AlertDialogClose>{t("detail.cancel")}</AlertDialogClose>
                     <AlertDialogClose
-                      className="bg-destructive text-white hover:bg-destructive/90"
+                      render={<Button variant="destructive" />}
                       onClick={remove}
                     >
                       {t("detail.deleteConfirmOk")}
@@ -227,8 +254,17 @@ export default function AccountDetailPage() {
                     {w.remainingPct !== undefined ? `${w.remainingPct.toFixed(1)}%` : ""}{" "}
                     <span className="text-sm text-muted-foreground">{windowValueText(w, unitLabel)}</span>
                   </p>
+                  {w.remainingPct !== undefined ? (
+                    <Progress value={Math.max(0, Math.min(100, w.remainingPct))} className="mt-2">
+                      <ProgressTrack>
+                        <ProgressIndicator
+                          className={w.remainingPct < account.warnThreshold ? "bg-destructive" : undefined}
+                        />
+                      </ProgressTrack>
+                    </Progress>
+                  ) : null}
                   {w.resetAt ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1.5 text-xs text-muted-foreground">
                       {t("overview.windowReset")}: {localDateTime(w.resetAt)}
                     </p>
                   ) : null}
@@ -259,6 +295,12 @@ export default function AccountDetailPage() {
                     {name}
                   </span>
                 ))}
+                {hasBalance ? (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="h-0.5 w-3 rounded-full border-t border-dashed border-muted-foreground" />
+                    {t("detail.chartBalance")}
+                  </span>
+                ) : null}
               </div>
               <div className="h-64" data-testid="trend-chart">
                 <ResponsiveContainer width="100%" height="100%">
@@ -291,6 +333,30 @@ export default function AccountDetailPage() {
                       connectNulls
                     />
                   ))}
+                  {hasBalance ? (
+                    <>
+                      <YAxis
+                        yAxisId="balance"
+                        orientation="right"
+                        width={48}
+                        tickFormatter={(v: number) => compactNumber(v)}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                      />
+                      <Line
+                        yAxisId="balance"
+                        type="monotone"
+                        dataKey="__balance"
+                        name={t("detail.chartBalance")}
+                        stroke="var(--muted-foreground)"
+                        strokeWidth={1.5}
+                        strokeDasharray="4 4"
+                        dot={false}
+                        connectNulls
+                      />
+                    </>
+                  ) : null}
                 </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -315,24 +381,38 @@ export default function AccountDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(history ?? [])
-                .slice()
-                .reverse()
-                .slice(0, 50)
-                .map((snap) => (
-                  <TableRow key={snap.id}>
-                    <TableCell className="whitespace-nowrap text-xs">{localDateTime(snap.fetchedAt)}</TableCell>
-                    <TableCell className="text-xs">
-                      {(snap.windows ?? [])
-                        .map((w) => {
-                          const label = w.label ?? w.kind;
-                          const pct = w.remainingPct !== undefined ? `${w.remainingPct.toFixed(0)}%` : "—";
-                          return `${label}: ${pct}`;
-                        })
-                        .join(" · ")}
-                    </TableCell>
-                  </TableRow>
-                ))}
+              {history === null ? (
+                <TableRow>
+                  <TableCell colSpan={2}>
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                </TableRow>
+              ) : history.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="py-8 text-center text-sm text-muted-foreground">
+                    {t("detail.noSnapshots")}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                history
+                  .slice()
+                  .reverse()
+                  .slice(0, 50)
+                  .map((snap) => (
+                    <TableRow key={snap.id}>
+                      <TableCell className="whitespace-nowrap text-xs">{localDateTime(snap.fetchedAt)}</TableCell>
+                      <TableCell className="text-xs">
+                        {(snap.windows ?? [])
+                          .map((w) => {
+                            const label = w.label ?? w.kind;
+                            const pct = w.remainingPct !== undefined ? `${w.remainingPct.toFixed(0)}%` : "—";
+                            return `${label}: ${pct}`;
+                          })
+                          .join(" · ")}
+                      </TableCell>
+                    </TableRow>
+                  ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

@@ -24,6 +24,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
   const isError = account.latestSnapshot?.status === "error";
   const hero = tightestWindow(display);
   const heroReset = countdownText(hero?.resetAt, tTime);
+  const hasBadges = account.warn || !account.enabled || isError;
 
   const refresh = async () => {
     setBusy(true);
@@ -62,25 +63,34 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
           </Link>
           <p className="truncate text-xs text-muted-foreground">{account.label}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {account.warn ? (
-            <Badge variant="destructive" data-testid="warn-badge">
-              <TriangleAlert />
-              {t("overview.lowQuota")}
-            </Badge>
-          ) : null}
-          {!account.enabled ? <Badge variant="secondary">{t("overview.disabled")}</Badge> : null}
-          {isError ? (
-            <Badge variant="error" data-testid="error-badge">
-              {t("overview.error")}
-            </Badge>
-          ) : null}
-          <Button variant="ghost" size="icon-sm" onClick={refresh} disabled={busy} aria-label={t("overview.refresh")}>
-            <RefreshCw className={busy ? "animate-spin" : undefined} />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0"
+          onClick={refresh}
+          disabled={busy}
+          aria-label={t("overview.refresh")}
+        >
+          <RefreshCw className={busy ? "animate-spin" : undefined} />
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
+        {hasBadges ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {account.warn ? (
+              <Badge variant="destructive" data-testid="warn-badge">
+                <TriangleAlert />
+                {t("overview.lowQuota")}
+              </Badge>
+            ) : null}
+            {!account.enabled ? <Badge variant="secondary">{t("overview.disabled")}</Badge> : null}
+            {isError ? (
+              <Badge variant="error" data-testid="error-badge">
+                {t("overview.error")}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
         {isError ? (
           <p className="rounded-md bg-destructive/8 px-3 py-2 text-xs text-destructive-foreground break-words dark:bg-destructive/16" data-testid="error-message">
             {account.latestSnapshot?.error ?? "error"}

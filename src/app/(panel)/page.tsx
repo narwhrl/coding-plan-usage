@@ -3,6 +3,7 @@
 import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Gauge, Layers, TimerReset, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -11,6 +12,7 @@ import { AccountCard } from "@/components/account-card";
 import type { AccountView } from "@/lib/types";
 import { overviewKpis, sortAccountsByUrgency } from "@/lib/overview";
 import { countdownText } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export default function OverviewPage() {
   const t = useTranslations("overview");
@@ -49,8 +51,13 @@ export default function OverviewPage() {
 
   if (accounts === null) {
     return (
-      <div className="space-y-4">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <div className="space-y-6">
+        <PageHeader title={t("title")} subtitle={t("subtitle")} />
+        <div className="grid gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-[92px] rounded-xl" />
+          ))}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-48 rounded-xl" />
@@ -66,10 +73,13 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
       {error ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-destructive">{t("loadFailed")}</CardContent>
+        <Card className="border-destructive/60" data-testid="overview-error">
+          <CardContent className="flex items-center gap-2 py-4 text-sm text-destructive-foreground">
+            <TriangleAlert className="size-4 shrink-0" />
+            {t("loadFailed")}
+          </CardContent>
         </Card>
       ) : null}
       {accounts.length === 0 && !error ? (
@@ -87,6 +97,7 @@ export default function OverviewPage() {
           {accounts.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-3" data-testid="kpi-band">
               <StatCard
+                icon={<Layers />}
                 label={t("kpiAccounts")}
                 value={String(kpis.enabledTotal)}
                 sub={
@@ -94,8 +105,10 @@ export default function OverviewPage() {
                     ? t("kpiErrors", { count: kpis.errorCount })
                     : t("kpiAllOk")
                 }
+                subTone={kpis.errorCount > 0 ? "error" : "muted"}
               />
               <StatCard
+                icon={<Gauge />}
                 label={t("kpiTightest")}
                 value={kpis.tightest ? `${kpis.tightest.window.remainingPct!.toFixed(0)}%` : "—"}
                 sub={
@@ -103,8 +116,16 @@ export default function OverviewPage() {
                     ? `${kpis.tightest.account.providerName} · ${kpis.tightest.account.label} · ${windowName(kpis.tightest.window)}`
                     : undefined
                 }
+                valueTone={
+                  kpis.tightest &&
+                  kpis.tightest.window.remainingPct !== undefined &&
+                  kpis.tightest.window.remainingPct < kpis.tightest.account.warnThreshold
+                    ? "error"
+                    : "default"
+                }
               />
               <StatCard
+                icon={<TimerReset />}
                 label={t("kpiNextReset")}
                 value={countdownText(kpis.nextReset?.window.resetAt, tTime) ?? "—"}
                 sub={
@@ -126,13 +147,58 @@ export default function OverviewPage() {
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function PageHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="space-y-1">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight">{title}</h1>
+      <p className="text-sm text-muted-foreground">{subtitle}</p>
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  sub,
+  subTone = "muted",
+  valueTone = "default",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  subTone?: "muted" | "error";
+  valueTone?: "default" | "error";
+}) {
   return (
     <Card data-testid="kpi-card">
       <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-1 font-heading text-2xl font-semibold tabular-nums">{value}</p>
-        {sub ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p> : null}
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <span className="text-muted-foreground/70 [&_svg]:size-4" aria-hidden="true">
+            {icon}
+          </span>
+        </div>
+        <p
+          className={cn(
+            "mt-1 font-heading text-2xl font-semibold tabular-nums",
+            valueTone === "error" && "text-destructive",
+          )}
+        >
+          {value}
+        </p>
+        {sub ? (
+          <p
+            className={cn(
+              "mt-0.5 truncate text-xs",
+              subTone === "error" ? "text-destructive-foreground" : "text-muted-foreground",
+            )}
+            title={sub}
+          >
+            {sub}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
