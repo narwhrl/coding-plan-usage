@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressIndicator, ProgressTrack } from "@/components/ui/progress";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
+import { SegmentedToggle } from "@/components/segmented-toggle";
 import { StatTile } from "@/components/stat-strip";
 import { compactNumber } from "@/lib/format";
 import { dailySeries, latestDaySeries, peakHour, type ModelUsage, type UsagePoint } from "@/lib/model-usage";
@@ -27,19 +27,15 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
           {t("title")}
         </CardTitle>
         <CardAction>
-          {/* variant/size 必须给在 ToggleGroup 上：ToggleGroupContext 的默认值会盖掉子项的同名 prop。 */}
-          <ToggleGroup
-            variant="outline"
-            size="sm"
-            value={[metric]}
-            onValueChange={(value) => {
-              const next = value[0];
-              if (next === "tokens" || next === "calls") setMetric(next);
-            }}
-          >
-            <ToggleGroupItem value="tokens">{t("tokens")}</ToggleGroupItem>
-            <ToggleGroupItem value="calls">{t("calls")}</ToggleGroupItem>
-          </ToggleGroup>
+          <SegmentedToggle
+            label={t("metricLabel")}
+            value={metric}
+            options={[
+              { value: "tokens", label: t("tokens") },
+              { value: "calls", label: t("calls") },
+            ]}
+            onValueChange={setMetric}
+          />
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-6">

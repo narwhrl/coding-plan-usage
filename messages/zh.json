@@ -116,9 +116,11 @@
     "range24h": "24 小时",
     "range7d": "7 天",
     "rangeAll": "全部",
+    "rangeLabel": "时间范围",
     "historyEmpty": "暂无快照",
     "usage": {
       "title": "用量",
+      "metricLabel": "指标",
       "tokens": "词元",
       "calls": "调用",
       "totalTokens": "总词元",

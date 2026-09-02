@@ -15,8 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
+import { SegmentedToggle } from "@/components/segmented-toggle";
 import { shortDateTime, shortTime, windowName } from "@/lib/format";
 import { buildTrendSeries } from "@/lib/trend";
 import type { HistorySnapshot } from "@/lib/types";
@@ -64,23 +64,13 @@ export function TrendChart({
           {tDetail("chart")}
         </CardTitle>
         <CardAction>
-          {/* variant/size 必须给在 ToggleGroup 上：ToggleGroupContext 的默认值会盖掉子项的同名 prop。 */}
-          <ToggleGroup
-            variant="outline"
-            size="sm"
-            value={[range]}
+          <SegmentedToggle
+            label={tDetail("rangeLabel")}
+            value={range}
+            options={RANGES.map((r) => ({ value: r.value, label: tDetail(r.messageKey) }))}
+            onValueChange={setRange}
             disabled={loading}
-            onValueChange={(value) => {
-              const next = value[0];
-              if (RANGES.some((r) => r.value === next)) setRange(next as RangeValue);
-            }}
-          >
-            {RANGES.map((r) => (
-              <ToggleGroupItem key={r.value} value={r.value}>
-                {tDetail(r.messageKey)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          />
         </CardAction>
       </CardHeader>
       <CardContent>

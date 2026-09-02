@@ -116,9 +116,11 @@
     "range24h": "24 hours",
     "range7d": "7 days",
     "rangeAll": "All",
+    "rangeLabel": "Time range",
     "historyEmpty": "No snapshots yet",
     "usage": {
       "title": "Usage",
+      "metricLabel": "Metric",
       "tokens": "Tokens",
       "calls": "Calls",
       "totalTokens": "Total tokens",
