@@ -72,14 +72,21 @@ describe("overviewKpis", () => {
     expect(result.nextReset).toEqual({ account, window: account.lastOkSnapshot?.windows[0] });
   });
 
-  it("excludes disabled accounts from every KPI", () => {
+  it("excludes disabled accounts from the quota KPIs but still counts them", () => {
     const account = mkAccount({
       enabled: false,
       latestSnapshot: snap([], "error"),
       lastOkSnapshot: snap([window(4, new Date(Date.now() + 60_000).toISOString())]),
     });
 
-    expect(overviewKpis([account])).toEqual({ enabledTotal: 0, errorCount: 0, tightest: null, nextReset: null });
+    expect(overviewKpis([account])).toEqual({
+      total: 1,
+      enabledTotal: 0,
+      disabledCount: 1,
+      errorCount: 0,
+      tightest: null,
+      nextReset: null,
+    });
   });
 
   it("ignores reset timestamps in the past", () => {

@@ -45,6 +45,7 @@
     "loadFailed": "加载失败，将自动重试",
     "kpiAccounts": "账户",
     "kpiErrors": "异常 {count} 个",
+    "kpiDisabled": "已停用 {count} 个",
     "kpiAllOk": "全部正常",
     "kpiTightest": "最紧张额度",
     "kpiNextReset": "最近重置",

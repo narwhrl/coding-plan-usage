@@ -114,8 +114,15 @@ export default function OverviewPage() {
             <StatStripItem
               data-testid="kpi-card"
               label={t("kpiAccounts")}
-              value={String(kpis.enabledTotal)}
-              hint={kpis.errorCount > 0 ? t("kpiErrors", { count: kpis.errorCount }) : t("kpiAllOk")}
+              // 数字对齐网格里的卡片数，异常/停用退到副行，否则「账户 3」旁边摆 4 张卡。
+              value={String(kpis.total)}
+              hint={[
+                kpis.errorCount > 0 ? t("kpiErrors", { count: kpis.errorCount }) : null,
+                kpis.disabledCount > 0 ? t("kpiDisabled", { count: kpis.disabledCount }) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+                .trim() || t("kpiAllOk")}
             />
             <StatStripItem
               data-testid="kpi-card"

@@ -45,6 +45,7 @@
     "loadFailed": "Load failed, retrying automatically",
     "kpiAccounts": "Accounts",
     "kpiErrors": "{count, plural, =1 {# error} other {# errors}}",
+    "kpiDisabled": "{count, plural, =1 {# disabled} other {# disabled}}",
     "kpiAllOk": "All healthy",
     "kpiTightest": "Tightest quota",
     "kpiNextReset": "Next reset",

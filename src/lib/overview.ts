@@ -51,7 +51,10 @@ export function sortAccountsByUrgency(accounts: AccountView[]): AccountView[] {
 }
 
 export type OverviewKpis = {
+  /** 账户总数，和网格里的卡片数一致。 */
+  total: number;
   enabledTotal: number;
+  disabledCount: number;
   errorCount: number;
   /** 非 error 的 enabled 账户中全局最小 pct 的窗口。 */
   tightest: { account: AccountView; window: Window } | null;
@@ -59,10 +62,17 @@ export type OverviewKpis = {
   nextReset: { account: AccountView; window: Window } | null;
 };
 
-/** KPI 汇总：只统计 enabled 账户。 */
+/** KPI 汇总：额度类指标只看 enabled 账户，计数则给出总数与停用数。 */
 export function overviewKpis(accounts: AccountView[]): OverviewKpis {
   const enabled = accounts.filter((a) => a.enabled);
-  const kpis: OverviewKpis = { enabledTotal: enabled.length, errorCount: 0, tightest: null, nextReset: null };
+  const kpis: OverviewKpis = {
+    total: accounts.length,
+    enabledTotal: enabled.length,
+    disabledCount: accounts.length - enabled.length,
+    errorCount: 0,
+    tightest: null,
+    nextReset: null,
+  };
   let tightestPct = Infinity;
   let nextResetMs = Infinity;
   for (const account of enabled) {
