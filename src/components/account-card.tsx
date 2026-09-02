@@ -61,14 +61,16 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
       <CardHeader className="flex flex-row items-center gap-3 pb-4">
         <ProviderMonogram name={account.providerName} />
         <div className="min-w-0 flex-1">
-          <Link
-            href={`/accounts/${account.id}`}
-            className="group flex items-center gap-1 rounded-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            data-testid="account-link"
-          >
-            <span className="truncate group-hover:underline">{account.providerName}</span>
-            <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-          </Link>
+          <h3 className="font-medium">
+            <Link
+              href={`/accounts/${account.id}`}
+              className="group flex items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="account-link"
+            >
+              <span className="truncate group-hover:underline">{account.providerName}</span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+          </h3>
           <p className="truncate text-xs text-muted-foreground">{account.label}</p>
         </div>
         <Button

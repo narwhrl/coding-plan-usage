@@ -51,6 +51,7 @@
     "trend": "Tightest value, last 7 days",
     "attention": "Needs attention",
     "healthy": "Other accounts",
+    "allAccounts": "All accounts",
     "viewDetail": "View details"
   },
   "window": {
@@ -186,6 +187,9 @@
       "created": "Created",
       "list": "Existing custom providers",
       "delete": "Delete",
+      "deleteConfirmTitle": "Delete custom provider",
+      "deleteConfirmBody": "Accounts using this provider stop working. Make sure none are still in use.",
+      "cancel": "Cancel",
       "empty": "No custom providers",
       "emptyHint": "Purely declarative — no code required",
       "apiKeyForAccount": "API Key",

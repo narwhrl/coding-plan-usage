@@ -54,7 +54,9 @@ export function TrendChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{tDetail("chart")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {tDetail("chart")}
+        </CardTitle>
         <CardAction>
           <ToggleGroup
             value={[range]}

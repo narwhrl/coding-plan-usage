@@ -273,7 +273,9 @@ export default function AccountDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{tDetail("windows")}</CardTitle>
+          <CardTitle render={<h2 />} className="text-base">
+            {tDetail("windows")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {windows.length === 0 && !balance ? (

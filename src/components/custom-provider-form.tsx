@@ -3,7 +3,20 @@
 import type React from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Plug, TriangleAlert } from "lucide-react";
+import { Check, Plug, Trash2, TriangleAlert } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogClose,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogPopup,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  AlertDialogViewport,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,7 +139,9 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
     <div className="max-w-3xl space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("create")}</CardTitle>
+          <CardTitle render={<h2 />} className="text-base">
+            {t("create")}
+          </CardTitle>
           <CardDescription>{t("subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -339,7 +354,9 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("list")}</CardTitle>
+          <CardTitle render={<h2 />} className="text-base">
+            {t("list")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {customProviders.length === 0 ? (
@@ -358,13 +375,44 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
                 <li key={p.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                   <ProviderMonogram name={p.name} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
+                    <h3 className="truncate text-sm font-medium">{p.name}</h3>
                     <p className="truncate font-mono text-xs text-muted-foreground">{p.id}</p>
                   </div>
                   <Badge variant="outline">{p.unit}</Badge>
-                  <Button variant="ghost" size="sm" onClick={() => void removeProvider(p.id)}>
-                    {t("delete")}
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("delete")}
+                          className="text-muted-foreground hover:text-destructive-foreground"
+                        />
+                      }
+                    >
+                      <Trash2 />
+                    </AlertDialogTrigger>
+                    <AlertDialogPortal>
+                      <AlertDialogBackdrop />
+                      <AlertDialogViewport>
+                        <AlertDialogPopup>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t("deleteConfirmTitle")}</AlertDialogTitle>
+                            <AlertDialogDescription>{t("deleteConfirmBody")}</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogClose>{t("cancel")}</AlertDialogClose>
+                            <AlertDialogClose
+                              className="bg-destructive text-white hover:bg-destructive/90"
+                              onClick={() => void removeProvider(p.id)}
+                            >
+                              {t("delete")}
+                            </AlertDialogClose>
+                          </AlertDialogFooter>
+                        </AlertDialogPopup>
+                      </AlertDialogViewport>
+                    </AlertDialogPortal>
+                  </AlertDialog>
                 </li>
               ))}
             </ul>

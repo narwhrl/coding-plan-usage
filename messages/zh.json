@@ -51,6 +51,7 @@
     "trend": "近 7 天最紧值",
     "attention": "需要关注",
     "healthy": "其余账户",
+    "allAccounts": "全部账户",
     "viewDetail": "查看详情"
   },
   "window": {
@@ -186,6 +187,9 @@
       "created": "已创建",
       "list": "已有自定义提供商",
       "delete": "删除",
+      "deleteConfirmTitle": "删除自定义提供商",
+      "deleteConfirmBody": "使用该提供商的账户会一并失效，请先确认没有账户在用。",
+      "cancel": "取消",
       "empty": "暂无自定义提供商",
       "emptyHint": "纯声明式配置，无需写代码",
       "apiKeyForAccount": "API Key",

@@ -160,7 +160,11 @@ export default function OverviewPage() {
               />
             </>
           ) : (
-            <AccountGrid accounts={sorted} onRefreshed={requestRefresh} />
+            <AccountSection
+              title={t("allAccounts")}
+              accounts={sorted}
+              onRefreshed={requestRefresh}
+            />
           )}
         </>
       )}
@@ -168,6 +172,10 @@ export default function OverviewPage() {
   );
 }
 
+/**
+ * 一组账户卡。count 省略时标题只留给读屏（未分节时不需要可见的分组标签），
+ * 但标题始终存在，卡内的账户名才能安全地当 h3 用。
+ */
 function AccountSection({
   title,
   count,
@@ -175,35 +183,27 @@ function AccountSection({
   onRefreshed,
 }: {
   title: string;
-  count: number;
+  count?: number;
   accounts: AccountView[];
   onRefreshed: () => void;
 }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
-        <Badge variant="outline" size="sm">
-          {count}
-        </Badge>
+      {count === undefined ? (
+        <h2 className="sr-only">{title}</h2>
+      ) : (
+        <div className="flex items-center gap-2">
+          <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h2>
+          <Badge variant="outline" size="sm">
+            {count}
+          </Badge>
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {accounts.map((account) => (
+          <AccountCard key={account.id} account={account} onRefreshed={onRefreshed} />
+        ))}
       </div>
-      <AccountGrid accounts={accounts} onRefreshed={onRefreshed} />
     </section>
-  );
-}
-
-function AccountGrid({
-  accounts,
-  onRefreshed,
-}: {
-  accounts: AccountView[];
-  onRefreshed: () => void;
-}) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {accounts.map((account) => (
-        <AccountCard key={account.id} account={account} onRefreshed={onRefreshed} />
-      ))}
-    </div>
   );
 }

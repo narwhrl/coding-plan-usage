@@ -23,7 +23,9 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
   return (
     <Card data-testid="usage-card">
       <CardHeader>
-        <CardTitle className="text-base">{t("title")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {t("title")}
+        </CardTitle>
         <CardAction>
           <ToggleGroup
             value={[metric]}
@@ -48,14 +50,8 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
           {peak ? (
             <StatTile
               label={t("peak")}
-              value={
-                <>
-                  {compactNumber(peak.tokens)}{" "}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    @ {peak.label.slice(6)}
-                  </span>
-                </>
-              }
+              value={compactNumber(peak.tokens)}
+              hint={peak.label}
             />
           ) : null}
         </div>
@@ -65,7 +61,7 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
 
         {usage.models.length > 0 ? (
           <div className="space-y-3">
-            <p className="text-sm font-medium">{t("byModel")}</p>
+            <h3 className="text-sm font-medium">{t("byModel")}</h3>
             {usage.models.map((m) => {
               const share = modelsTotal > 0 ? (m.totalTokens / modelsTotal) * 100 : 0;
               return (
@@ -110,7 +106,7 @@ function UsageBarChart({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{title}</p>
+      <h3 className="text-sm font-medium">{title}</h3>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>

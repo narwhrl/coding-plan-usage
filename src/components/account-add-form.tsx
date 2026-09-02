@@ -74,7 +74,9 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t("add")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {t("add")}
+        </CardTitle>
         <CardDescription>{t("addHint")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5">

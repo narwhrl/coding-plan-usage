@@ -102,7 +102,9 @@ export default function SettingsPage() {
           <AccountAddForm providers={providers} onSaved={requestRefresh} />
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("accounts.list")}</CardTitle>
+              <CardTitle render={<h2 />} className="text-base">
+                {t("accounts.list")}
+              </CardTitle>
               <CardDescription>{t("accounts.listHint")}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -122,12 +124,14 @@ export default function SettingsPage() {
                     <li key={account.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                       <ProviderMonogram name={account.providerName} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/accounts/${account.id}`}
-                          className="truncate rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          {account.providerName}
-                        </Link>
+                        <h3 className="truncate text-sm font-medium">
+                          <Link
+                            href={`/accounts/${account.id}`}
+                            className="rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {account.providerName}
+                          </Link>
+                        </h3>
                         <p className="truncate text-xs text-muted-foreground">{account.label}</p>
                       </div>
                       <AccountStatusBadges account={account} />
@@ -241,7 +245,9 @@ function GeneralSettingsForm({
   return (
     <Card className="max-w-xl">
       <CardHeader>
-        <CardTitle className="text-base">{t("title")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {t("title")}
+        </CardTitle>
         <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">

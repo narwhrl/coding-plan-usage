@@ -39,7 +39,9 @@ export function SnapshotHistory({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{tDetail("history")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {tDetail("history")}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {rows.length === 0 ? (
