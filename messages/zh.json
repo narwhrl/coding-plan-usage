@@ -102,6 +102,7 @@
     "credentials": "凭证（留空保持不变）",
     "noSnapshots": "快照不足，至少需要两次成功采集才能画出趋势",
     "notFound": "账户不存在或已被删除",
+    "notFoundHint": "它可能已被删除，或链接里的 ID 不对。",
     "summaryTightest": "最紧额度",
     "summaryNextReset": "下次重置",
     "summaryBalance": "余额",

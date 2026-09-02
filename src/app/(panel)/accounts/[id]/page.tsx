@@ -145,7 +145,7 @@ export default function AccountDetailPage() {
               <SearchX />
             </EmptyMedia>
             <EmptyTitle>{tDetail("notFound")}</EmptyTitle>
-            <EmptyDescription>{tDetail("back")}</EmptyDescription>
+            <EmptyDescription>{tDetail("notFoundHint")}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button render={<Link href="/" />}>{tDetail("back")}</Button>

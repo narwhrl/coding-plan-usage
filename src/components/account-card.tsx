@@ -62,9 +62,10 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         <ProviderMonogram name={account.providerName} />
         <div className="min-w-0 flex-1">
           <h3 className="font-medium">
+            {/* inline-flex 而不是 flex：否则链接撑满整行，焦点环会框住整条头部而不是账户名。 */}
             <Link
               href={`/accounts/${account.id}`}
-              className="group flex items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="group inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="account-link"
             >
               <span className="truncate group-hover:underline">{account.providerName}</span>

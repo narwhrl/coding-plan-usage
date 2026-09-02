@@ -102,6 +102,7 @@
     "credentials": "Credentials (leave empty to keep)",
     "noSnapshots": "Not enough snapshots yet — a trend needs at least two successful fetches",
     "notFound": "This account no longer exists",
+    "notFoundHint": "It may have been deleted, or the ID in the link is wrong.",
     "summaryTightest": "Tightest quota",
     "summaryNextReset": "Next reset",
     "summaryBalance": "Balance",
