@@ -70,6 +70,14 @@ import {
   type UsagePoint,
 } from "@/lib/model-usage";
 
+/** Recharts Tooltip 共用样式：走 tokens，亮暗自动适配。 */
+const tooltipStyle = {
+  background: "var(--popover)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-md)",
+  color: "var(--popover-foreground)",
+} as const;
+
 export default function AccountDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -240,20 +248,38 @@ export default function AccountDetailPage() {
         </CardHeader>
         <CardContent>
           {history && history.length > 1 ? (
-            <div className="h-64" data-testid="trend-chart">
-              <ResponsiveContainer width="100%" height="100%">
+            <>
+              <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1">
+                {seriesNames.map((name, index) => (
+                  <span key={name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ background: `var(--chart-${(index % 5) + 1})` }}
+                    />
+                    {name}
+                  </span>
+                ))}
+              </div>
+              <div className="h-64" data-testid="trend-chart">
+                <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="timeLabel" hide />
-                  <YAxis width={40} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-md)",
-                      color: "var(--popover-foreground)",
-                    }}
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis
+                    dataKey="timeLabel"
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                    tickLine={false}
+                    axisLine={{ stroke: "var(--border)" }}
+                    minTickGap={32}
                   />
+                  <YAxis
+                    width={40}
+                    domain={[0, 100]}
+                    tickFormatter={(v: number) => `${v}%`}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                  />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: "var(--border)" }} />
                   {seriesNames.map((name, index) => (
                     <Line
                       key={name}
@@ -266,8 +292,9 @@ export default function AccountDetailPage() {
                     />
                   ))}
                 </LineChart>
-              </ResponsiveContainer>
-            </div>
+                </ResponsiveContainer>
+              </div>
+            </>
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("detail.noSnapshots")}</p>
           )}
@@ -322,15 +349,22 @@ function UsageBarChart({ data, metric }: { data: UsagePoint[]; metric: "tokens" 
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-          <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-          <YAxis width={48} tick={{ fontSize: 12 }} tickFormatter={(v: number) => compactNumber(v)} />
+          <XAxis
+            dataKey="label"
+            tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            width={48}
+            tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => compactNumber(v)}
+          />
           <Tooltip
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              color: "var(--popover-foreground)",
-            }}
+            contentStyle={tooltipStyle}
+            cursor={{ stroke: "var(--border)" }}
             formatter={(value) => compactNumber(Number(value))}
           />
           <Bar dataKey={metric} fill={metric === "tokens" ? "var(--chart-1)" : "var(--chart-2)"} name={t(`detail.usage.${metric}`)} />
