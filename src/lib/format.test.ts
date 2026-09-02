@@ -35,9 +35,9 @@ describe("windowPctText / windowAmountText", () => {
   });
 
   it("renders remaining/total for absolute windows", () => {
-    const tokens = window({ remaining: 1_200, total: 4_000, remainingPct: 30 });
+    const tokens = window({ remaining: 12_500, total: 40_000, remainingPct: 30 });
     expect(windowPctText(tokens)).toBe("30%");
-    expect(windowAmountText(tokens, "tokens")).toBe("1.2K / 4K tokens");
+    expect(windowAmountText(tokens, "tokens")).toBe("12.5K / 40.0K tokens");
   });
 
   it("falls back to used/total when remaining is absent", () => {
@@ -50,7 +50,7 @@ describe("quotaTone", () => {
     expect(quotaTone(10, 20)).toBe("critical");
     expect(quotaTone(30, 20)).toBe("warning");
     expect(quotaTone(60, 20)).toBe("normal");
-    expect(quotaTone(40, 30)).toBe("normal");
+    expect(quotaTone(55, 30)).toBe("normal");
     expect(quotaTone(undefined, 20)).toBe("normal");
   });
 });

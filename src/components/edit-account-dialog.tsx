@@ -16,8 +16,8 @@ import {
   DialogTitle,
   DialogViewport,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AccountView, CredentialFieldView } from "@/lib/types";
@@ -87,37 +87,37 @@ export function EditAccountDialog({
               <DialogDescription>{account.providerName}</DialogDescription>
             </DialogHeader>
             <DialogPanel className="grid gap-4">
-              <Field>
-                <FieldLabel htmlFor="edit-label">{t("label")}</FieldLabel>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-label">{t("label")}</Label>
                 <Input id="edit-label" value={label} onValueChange={setLabel} />
-              </Field>
-              <div className="grid grid-cols-2 gap-4">
-                <Field>
-                  <FieldLabel htmlFor="edit-interval">{t("interval")}</FieldLabel>
-                  <Input id="edit-interval" inputMode="numeric" value={interval} onValueChange={setIntervalValue} />
-                  <FieldDescription>
-                    {tAccounts("overrideHint")} · {tCommon("minutes")}
-                  </FieldDescription>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="edit-warn">{t("warnPct")}</FieldLabel>
-                  <Input id="edit-warn" inputMode="numeric" value={warnPct} onValueChange={setWarnPct} />
-                  <FieldDescription>
-                    {tAccounts("overrideHint")} · {tCommon("percent")}
-                  </FieldDescription>
-                </Field>
               </div>
-              <Field>
-                <FieldLabel htmlFor="edit-baseurl">{t("baseUrl")}</FieldLabel>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-interval">{t("interval")}</Label>
+                  <Input id="edit-interval" inputMode="numeric" value={interval} onValueChange={setIntervalValue} />
+                  <p className="text-xs text-muted-foreground">
+                    {tAccounts("overrideHint")} · {tCommon("minutes")}
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-warn">{t("warnPct")}</Label>
+                  <Input id="edit-warn" inputMode="numeric" value={warnPct} onValueChange={setWarnPct} />
+                  <p className="text-xs text-muted-foreground">
+                    {tAccounts("overrideHint")} · {tCommon("percent")}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-baseurl">{t("baseUrl")}</Label>
                 <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
-              </Field>
+              </div>
               <div className="flex items-center justify-between gap-3">
-                <FieldLabel htmlFor="edit-enabled">{t("enabled")}</FieldLabel>
+                <Label htmlFor="edit-enabled">{t("enabled")}</Label>
                 <Switch id="edit-enabled" checked={enabled} onCheckedChange={setEnabled} />
               </div>
               {fields.map((field) => (
-                <Field key={field.key}>
-                  <FieldLabel htmlFor={`edit-cred-${field.key}`}>{field.label}</FieldLabel>
+                <div key={field.key} className="grid gap-2">
+                  <Label htmlFor={`edit-cred-${field.key}`}>{field.label}</Label>
                   {field.kind === "json" ? (
                     <Textarea
                       id={`edit-cred-${field.key}`}
@@ -139,8 +139,8 @@ export function EditAccountDialog({
                       placeholder="—"
                     />
                   )}
-                  <FieldDescription>{t("credentials")}</FieldDescription>
-                </Field>
+                  <p className="text-xs text-muted-foreground">{t("credentials")}</p>
+                </div>
               ))}
             </DialogPanel>
             <DialogFooter>

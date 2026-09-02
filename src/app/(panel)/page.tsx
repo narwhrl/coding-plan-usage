@@ -124,7 +124,6 @@ export default function OverviewPage() {
               label={t("kpiAccounts")}
               value={String(kpis.total)}
               hint={kpiSub}
-              tone={kpis.errorCount > 0 ? "critical" : "default"}
             />
             <StatStripItem
               data-testid="kpi-card"
