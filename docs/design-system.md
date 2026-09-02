@@ -55,7 +55,12 @@
 | `QuotaBar` / `quotaTextClassName` | 额度条与额度文本，同一套分级 |
 | `AccountStatusBadges` | 账户状态徽标（失败 / 余量偏低 / 已停用 / 正常） |
 | `ChartTooltipContent` | Recharts tooltip 的统一外观 |
-| `Sparkline` | 概览卡里的近 7 天迷你趋势（折线 + 面积） |
+| `SparkStrip` | 概览卡里的近 7 天每日最紧值：固定 7 个日槽的迷你柱 |
+
+迷你趋势画柱不画折线：数据是一天一个值，折线会在缺测的日子之间插值，而空槽本身就是
+「那天没采到」的信息。槽位固定成 7 个（最右为今天，见 `src/lib/spark-strip.ts`），
+所有卡片的柱子才会纵向对齐。它和上方的当前额度不是同一个数（每日最紧值 vs 此刻），
+所以必须带标题和 min–max 区间，不能贴着大数字当装饰。
 
 ## 排版层级
 
@@ -73,6 +78,16 @@
 小节标题不能比它所辖的字段标签更弱（别用 `text-xs text-muted-foreground` 当小节标题），
 分段感交给上方 `border-t`，标题只需要比字段标签高一档。
 
+## 加载与空态
+
+- 一个页面的多个接口各自落地，不要 `Promise.all` 之后再一起 `setState`：最慢的请求会把
+  已经拿到的头部和指标一起压在骨架屏后面（详情页的 `/api/accounts` 与 `/snapshots`）。
+- 骨架屏留在拥有数据的那张卡里（`TrendChart`、`SnapshotHistory` 自己判 `history === null`），
+  卡壳与标题保持在位，数据到位时不会整页跳动。加载中的区块挂 `aria-busy`。
+- 空态要分清「没有数据」和「当前视图看不到数据」：趋势图在整段历史不足两点时说
+  「快照不足」，在所选时间范围内点数不足时说范围太窄，并给一个切到「全部」的按钮。
+  同一句文案套两种成因，用户只会以为功能坏了。
+
 ## 额度分级
 
 `quotaTone(pct, warnPct)`（`src/lib/format.ts`）是全站唯一的紧张度判定，`QuotaBar`、
@@ -88,6 +103,11 @@
   自定义提供商的 kind 不在词条表里，直接 `t()` 会把 `window.<kind>` 原样显示。
   next-intl 不支持 `defaultValue`。
 - 相对时间用 `relativeTimeText`、倒计时用 `countdownText`，都从 `time.*` 词条取词，别写死中英文后缀。
+- 窗口重置时刻用 `resetText`：采集有间隔，快照里的 `resetAt` 可能已经过期，那时要说
+  「1 小时前」而不是「0 分钟后」。只有确定筛过未来时间的地方（KPI 条的 `nextResetWindow`）
+  才直接用 `countdownText`。
+- 计数类 KPI 的数字要和屏幕上的卡片数对得上；「只算启用中」这类口径差异放到副行文案里，
+  别让「账户 3」旁边摆着 4 张卡。
 - 组件渲染期间不要调 `Date.now()`（`react-hooks/purity`）。需要"现在"的逻辑放进
   `src/lib/overview.ts`（`nextResetWindow`）或 `src/lib/trend.ts`（`buildTrendSeries`）这类纯函数。
 
