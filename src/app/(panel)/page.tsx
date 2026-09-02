@@ -64,9 +64,10 @@ export default function OverviewPage() {
       <div className="space-y-6" aria-busy="true">
         <PageHeader title={t("title")} description={t("subtitle")} />
         <Skeleton className="h-20 rounded-2xl" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-2xl" />
+        {/* 列数与骨架数跟着真实网格走，数据到位时不会重排。 */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-72 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -206,7 +207,12 @@ function AccountSection({
           </Badge>
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/*
+        最多两列。分组之后每节的卡片数是 1~4 张，三列网格下 2 张卡会空出右边整整一格、
+        4 张卡会在第二行空出两格；两列在这些数量上更常填满，落空时也只差半行。
+        卡片因此宽到 ~540px，额度条和 7 日柱条正好铺满一行。
+      */}
+      <div className="grid gap-4 sm:grid-cols-2">
         {accounts.map((account) => (
           <AccountCard key={account.id} account={account} onRefreshed={onRefreshed} />
         ))}
