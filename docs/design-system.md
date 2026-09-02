@@ -26,6 +26,24 @@
 - 暗色下 `--card`/`--popover`/`--border` 相对 coss 默认值各抬了一档（94%/90%/10%），
   否则卡面与背景同色、浮层压不住卡片。改这三个值前先在暗色下看一眼层次。
 
+## 对比度（WCAG AA）
+
+正文与读数按 4.5:1 验收，只有 ≥24px、或 ≥18.66px 且字重 ≥700 才算大字（3:1）。
+注意 `font-semibold` 是 600：`text-xl font-semibold` 的 KPI 数字仍按小字算。
+
+- **填充色和文字色是两套令牌。** `--destructive`/`--warning`/`--success` 是给进度条、
+  徽标底色、图标用的饱和色；文字取 `*-foreground` 那一支。`--destructive` 是 red-500，
+  浅色主题下对白底只有 3.8:1，直接拿来写数字过不了 AA。
+- **不要在语义色上再叠不透明度。** `text-muted-foreground/72` 这类写法把 5.6:1 打到 2.9:1；
+  次级文字已经是次级色了，需要更弱的层次就换令牌，不是打折。
+- **容器级 `opacity-*` 会连带压低文字。** 停用/失效态别整块调透明度——卡里的
+  `text-muted-foreground` 本来贴着 AA 线，乘 0.72 就掉下去了。改用 `bg-muted` 之类的
+  表面差异，语义交给徽标（`AccountStatusBadges`）说明。
+- **悬停态要真的换色。** 未选中项停在 `muted-foreground` 时，`hover:text-muted-foreground`
+  等于没有反馈；抬到 `hover:text-foreground`。
+- 验收方式是量渲染像素，不是看令牌：取文字包围盒内离背景最远的那个像素与众数背景比，
+  令牌算出来合规、叠了不透明度或半透明背景后照样会挂。
+
 ## 常用组件速查
 
 | 用途 | 组件 |
