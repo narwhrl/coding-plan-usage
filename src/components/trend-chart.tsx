@@ -133,30 +133,25 @@ export function TrendChart({
                       stroke={`var(--chart-${(index % 5) + 1})`}
                       strokeWidth={2}
                       dot={false}
-                      activeDot={{ r: 3, strokeWidth: 0 }}
                       connectNulls
+                      // 关动画：定时刷新的仪表盘上每次轮询都重播一遍入场动画只会闪眼。
+                      isAnimationActive={false}
                     />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </>
-        ) : (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              {rangeTooNarrow ? tDetail("rangeSparse") : tDetail("noSnapshots")}
-            </p>
-            {rangeTooNarrow && range !== "all" ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRange("all")}
-                data-testid="trend-widen-range"
-              >
-                {tDetail("rangeSparseAction")}
-              </Button>
-            ) : null}
+        ) : rangeTooNarrow ? (
+          // 空态要分清成因：范围太窄给一个切到「全部」的出口，而不是让用户以为功能坏了。
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <p className="text-sm text-muted-foreground">{tDetail("rangeTooNarrow")}</p>
+            <Button variant="outline" size="sm" onClick={() => setRange("all")}>
+              {tDetail("showAll")}
+            </Button>
           </div>
+        ) : (
+          <p className="py-8 text-center text-sm text-muted-foreground">{tDetail("noSnapshots")}</p>
         )}
       </CardContent>
     </Card>

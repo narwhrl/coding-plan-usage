@@ -13,7 +13,7 @@ import { dailySeries, latestDaySeries, peakHour, type ModelUsage, type UsagePoin
 
 type Metric = "tokens" | "calls";
 
-/** GLM model-usage 面板：小时/天柱状图 + 按模型占比。 */
+/** model-usage 面板：小时/天柱状图 + 按模型占比。 */
 export function UsageCard({ usage }: { usage: ModelUsage }) {
   const t = useTranslations("detail.usage");
   const [metric, setMetric] = useState<Metric>("tokens");
@@ -43,11 +43,7 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
           <StatTile label={t("totalTokens")} value={compactNumber(usage.totalTokens)} />
           <StatTile label={t("totalCalls")} value={compactNumber(usage.totalCalls)} />
           {peak ? (
-            <StatTile
-              label={t("peak")}
-              value={compactNumber(peak.tokens)}
-              hint={peak.label}
-            />
+            <StatTile label={t("peak")} value={compactNumber(peak.tokens)} hint={peak.label} />
           ) : null}
         </div>
 
@@ -131,6 +127,7 @@ function UsageBarChart({
               radius={[3, 3, 0, 0]}
               // 不设上限时 7 天视图会摊成一整排巨大色块，压过页面其余内容。
               maxBarSize={40}
+              isAnimationActive={false}
             />
           </BarChart>
         </ResponsiveContainer>
