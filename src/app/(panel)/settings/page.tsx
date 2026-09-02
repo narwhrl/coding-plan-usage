@@ -244,7 +244,8 @@ function GeneralSettingsForm({
   };
 
   return (
-    <Card className="max-w-xl">
+    // 与「自定义提供商」页同宽：两个表单页宽度不一致时，切页签内容框会明显跳一下。
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardTitle render={<h2 />} className="text-base">
           {t("title")}
@@ -252,47 +253,50 @@ function GeneralSettingsForm({
         <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        {settings === null ? (
-          <>
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-          </>
-        ) : (
-          <>
-            <Field>
-              <FieldLabel htmlFor="general-interval">{t("defaultInterval")}</FieldLabel>
-              <InputGroup>
-                <InputGroupInput
-                  id="general-interval"
-                  inputMode="numeric"
-                  value={interval}
-                  onValueChange={setIntervalValue}
-                  data-testid="general-interval"
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>{tCommon("minutes")}</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-              <FieldDescription>{t("defaultIntervalHint")}</FieldDescription>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
-              <InputGroup>
-                <InputGroupInput
-                  id="general-warn"
-                  inputMode="numeric"
-                  value={warnPct}
-                  onValueChange={setWarnPct}
-                  data-testid="general-warn"
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>%</InputGroupText>
-                </InputGroupAddon>
-              </InputGroup>
-              <FieldDescription>{t("warnPctHint")}</FieldDescription>
-            </Field>
-          </>
-        )}
+        {/* 两个数字字段并排，和「添加账户」里的同一对字段保持一致；单列会让 2 位数的输入框拉满整行。 */}
+        <div className="grid grid-cols-2 gap-4">
+          {settings === null ? (
+            <>
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </>
+          ) : (
+            <>
+              <Field>
+                <FieldLabel htmlFor="general-interval">{t("defaultInterval")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="general-interval"
+                    inputMode="numeric"
+                    value={interval}
+                    onValueChange={setIntervalValue}
+                    data-testid="general-interval"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>{tCommon("minutes")}</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>{t("defaultIntervalHint")}</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="general-warn"
+                    inputMode="numeric"
+                    value={warnPct}
+                    onValueChange={setWarnPct}
+                    data-testid="general-warn"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>%</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>{t("warnPctHint")}</FieldDescription>
+              </Field>
+            </>
+          )}
+        </div>
         <Separator />
         <div className="flex items-center gap-3">
           <Button onClick={save} loading={busy} disabled={!settings} data-testid="general-save">
