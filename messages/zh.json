@@ -150,7 +150,7 @@
       "unit": "单位",
       "baseUrl": "Base URL",
       "path": "路径",
-      "method": "Method",
+      "method": "方法",
       "authType": "认证方式",
       "authBearer": "Bearer Token",
       "authHeader": "自定义 Header",

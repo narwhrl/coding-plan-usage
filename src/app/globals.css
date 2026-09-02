@@ -196,7 +196,6 @@
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-400);
   --accent: --alpha(var(--color-white) / 4%);
-  --accent-foreground: var(--color-neutral-100);
   --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
   /* 卡面与描边比默认值再抬一档：98%/6% 在暗色下几乎与背景同色，卡片读不出层次。 */
   --border: --alpha(var(--color-white) / 10%);

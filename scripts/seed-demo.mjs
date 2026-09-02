@@ -48,13 +48,9 @@ insertProvider.run("deepseek", "DeepSeek", "usd", 4, iso(nowMs));
 const insertAccount = db.prepare(
   "INSERT INTO accounts (id, provider_id, label, credentials_cipher, config, enabled, next_fetch_at, sort_order, created_at) VALUES (?, ?, ?, 'v1:seed', '{\"demo\":true}', ?, ?, ?, ?)",
 );
-const insertSnapStmt = db.prepare(
-  "INSERT INTO snapshots (account_id, fetched_at, status, error, windows, balance, raw) VALUES (?, ?, ?, ?, ?, ?, ?)",
+const insertSnap = db.prepare(
+  "INSERT INTO snapshots (account_id, fetched_at, status, error, windows, balance, raw) VALUES (?, ?, ?, ?, ?, ?, NULL)",
 );
-
-/** raw 默认 null；只有需要在详情页展示 meta 的快照才传。 */
-const insertSnap = (accountId, fetchedAt, status, error, windows, balance, raw = null) =>
-  insertSnapStmt.run(accountId, fetchedAt, status, error, windows, balance, raw);
 
 const addAccount = (id, providerId, label, enabled, sortOrder) =>
   insertAccount.run(id, providerId, label, enabled ? 1 : 0, nowMs + 365 * DAY, sortOrder, iso(nowMs));
@@ -87,7 +83,7 @@ const claudePct = (idx) => Math.round((60 - (52 * idx) / 27) * 10) / 10; // idx 
 {
   let idx = 0;
   for (const ms of snapshotTimes()) {
-    insertSnap(
+    insertSnap.run(
       "demo-claude",
       iso(ms),
       "ok",
@@ -100,7 +96,7 @@ const claudePct = (idx) => Math.round((60 - (52 * idx) / 27) * 10) / 10; // idx 
     );
     idx += 1;
   }
-  insertSnap(
+  insertSnap.run(
     "demo-claude",
     iso(nowMs),
     "ok",
@@ -113,66 +109,20 @@ const claudePct = (idx) => Math.round((60 - (52 * idx) / 27) * 10) / 10; // idx 
   );
 }
 
-/**
- * GLM meta.modelUsage 形状（/api/monitor/usage/model-usage 的 data）：
- * 近 7 个本地自然日、每日 24 个整点桶；夜间低谷 + 白天双峰，便于肉眼校验图表。
- */
-function modelUsage() {
-  const pad = (n) => String(n).padStart(2, "0");
-  const xTime = [];
-  const tokensUsage = [];
-  const modelCallCount = [];
-  const today = new Date(nowMs);
-  for (let d = 6; d >= 0; d--) {
-    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - d);
-    const stamp = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
-    for (let h = 0; h < 24; h++) {
-      xTime.push(`${stamp} ${pad(h)}:00`);
-      // 10 点与 16 点双峰，深夜近零；乘上按天递增的负载系数。
-      const shape = Math.exp(-((h - 10) ** 2) / 8) + 0.82 * Math.exp(-((h - 16) ** 2) / 10);
-      const load = 0.6 + 0.07 * (6 - d);
-      const tokens = Math.round(shape * load * 240_000);
-      tokensUsage.push(tokens);
-      modelCallCount.push(Math.round(tokens / 3200));
-    }
-  }
-  const totalTokens = tokensUsage.reduce((a, b) => a + b, 0);
-  return {
-    x_time: xTime,
-    tokensUsage,
-    modelCallCount,
-    totalUsage: {
-      totalTokensUsage: totalTokens,
-      totalModelCallCount: modelCallCount.reduce((a, b) => a + b, 0),
-    },
-    modelDataList: [
-      { modelName: "glm-4.6", totalTokens: Math.round(totalTokens * 0.62) },
-      { modelName: "glm-4.5-air", totalTokens: Math.round(totalTokens * 0.27) },
-      { modelName: "glm-4.5-flash", totalTokens: Math.round(totalTokens * 0.11) },
-    ],
-  };
-}
-
 // ── demo-glm：7 天平稳 ~70（5h 70 / weekly 72），weekly resetAt=now+2d；label 备用 ──
-// 最新一条带 meta.modelUsage，用于详情页的模型用量面板。
 addAccount("demo-glm", "glm", "备用", true, 2);
-{
-  const times = dailyTimes();
-  for (const [i, ms] of times.entries()) {
-    const isLatest = i === times.length - 1;
-    insertSnap(
-      "demo-glm",
-      iso(ms),
-      "ok",
-      null,
-      JSON.stringify([
-        { kind: "5h", unit: "percent", remainingPct: 70, resetAt: iso(ms + 5 * HOUR) },
-        { kind: "weekly", unit: "percent", remainingPct: 72, resetAt: iso(nowMs + 2 * DAY) },
-      ]),
-      null,
-      isLatest ? JSON.stringify({ meta: { modelUsage: modelUsage() }, responses: null }) : null,
-    );
-  }
+for (const ms of dailyTimes()) {
+  insertSnap.run(
+    "demo-glm",
+    iso(ms),
+    "ok",
+    null,
+    JSON.stringify([
+      { kind: "5h", unit: "percent", remainingPct: 70, resetAt: iso(ms + 5 * HOUR) },
+      { kind: "weekly", unit: "percent", remainingPct: 72, resetAt: iso(nowMs + 2 * DAY) },
+    ]),
+    null,
+  );
 }
 
 // ── demo-cursor：7 天 ok ~50%，最后一条 error；label 备用额度 ──
@@ -181,7 +131,7 @@ addAccount("demo-cursor", "cursor", "备用额度", true, 3);
   const pcts = [52, 51, 50, 49, 50, 48, 47];
   for (const [i, ms] of dailyTimes().entries()) {
     const remaining = Math.round(20 * (pcts[i] / 100) * 100) / 100;
-    insertSnap(
+    insertSnap.run(
       "demo-cursor",
       iso(ms),
       "ok",
@@ -192,12 +142,12 @@ addAccount("demo-cursor", "cursor", "备用额度", true, 3);
       null,
     );
   }
-  insertSnap("demo-cursor", iso(nowMs), "error", "seed error", null, null);
+  insertSnap.run("demo-cursor", iso(nowMs), "error", "seed error", null, null);
 }
 
 // ── demo-deepseek：停用，一条 ok 30% ──
 addAccount("demo-deepseek", "deepseek", "停用示例", false, 4);
-insertSnap(
+insertSnap.run(
   "demo-deepseek",
   iso(nowMs - DAY),
   "ok",
