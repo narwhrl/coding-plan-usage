@@ -1,0 +1,178 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogBackdrop,
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogPortal,
+  DialogTitle,
+  DialogViewport,
+} from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import type { AccountView, CredentialFieldView } from "@/lib/types";
+
+/** 账户编辑弹窗：凭证留空即保持原值（后端不回传明文）。 */
+export function EditAccountDialog({
+  account,
+  fields,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  account: AccountView;
+  fields: CredentialFieldView[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+}) {
+  const t = useTranslations("detail");
+  const tCommon = useTranslations("common");
+  const [label, setLabel] = useState(account.label);
+  const [interval, setIntervalValue] = useState(account.config.intervalMinutes?.toString() ?? "");
+  const [warnPct, setWarnPct] = useState(account.config.warnPct?.toString() ?? "");
+  const [baseUrl, setBaseUrl] = useState(account.config.baseUrl ?? "");
+  const [enabled, setEnabled] = useState(account.enabled);
+  const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = {
+        label,
+        enabled,
+        config: {
+          ...(interval.trim() ? { intervalMinutes: Number(interval) } : {}),
+          ...(warnPct.trim() ? { warnPct: Number(warnPct) } : {}),
+          ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
+        },
+      };
+      const filled = Object.fromEntries(
+        Object.entries(credentialValues).filter(([, value]) => value.trim().length > 0),
+      );
+      if (Object.keys(filled).length > 0) {
+        body.credentials = filled;
+      }
+      await fetch(`/api/accounts/${account.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      onOpenChange(false);
+      onSaved();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogBackdrop />
+        <DialogViewport>
+          <DialogPopup>
+            <DialogHeader>
+              <DialogTitle>{t("edit")}</DialogTitle>
+              <DialogDescription>
+                {account.providerName} · {account.label}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogPanel className="grid gap-4">
+              <Field>
+                <FieldLabel htmlFor="edit-label">{t("label")}</FieldLabel>
+                <Input id="edit-label" value={label} onValueChange={setLabel} />
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="edit-interval">{t("interval")}</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput
+                      id="edit-interval"
+                      inputMode="numeric"
+                      value={interval}
+                      onValueChange={setIntervalValue}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupText>{tCommon("minutes")}</InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="edit-warn">{t("warnPct")}</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput
+                      id="edit-warn"
+                      inputMode="numeric"
+                      value={warnPct}
+                      onValueChange={setWarnPct}
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupText>%</InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                </Field>
+              </div>
+              <Field>
+                <FieldLabel htmlFor="edit-baseurl">{t("baseUrl")}</FieldLabel>
+                <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
+              </Field>
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+                <Label htmlFor="edit-enabled">{t("enabled")}</Label>
+                <Switch id="edit-enabled" checked={enabled} onCheckedChange={setEnabled} />
+              </div>
+              {fields.length > 0 ? (
+                <p className="text-xs text-muted-foreground">{t("credentials")}</p>
+              ) : null}
+              {fields.map((field) => (
+                <Field key={field.key}>
+                  <FieldLabel htmlFor={`edit-cred-${field.key}`}>{field.label}</FieldLabel>
+                  {field.kind === "json" ? (
+                    <Textarea
+                      id={`edit-cred-${field.key}`}
+                      value={credentialValues[field.key] ?? ""}
+                      onChange={(e) =>
+                        setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                      rows={3}
+                      placeholder={field.placeholder ?? "JSON"}
+                    />
+                  ) : (
+                    <Input
+                      id={`edit-cred-${field.key}`}
+                      type="password"
+                      autoComplete="off"
+                      value={credentialValues[field.key] ?? ""}
+                      onValueChange={(value) =>
+                        setCredentialValues((prev) => ({ ...prev, [field.key]: value }))
+                      }
+                      placeholder={field.placeholder}
+                    />
+                  )}
+                </Field>
+              ))}
+            </DialogPanel>
+            <DialogFooter>
+              <DialogClose>{t("cancel")}</DialogClose>
+              <Button onClick={save} loading={busy}>
+                {t("save")}
+              </Button>
+            </DialogFooter>
+          </DialogPopup>
+        </DialogViewport>
+      </DialogPortal>
+    </Dialog>
+  );
+}
