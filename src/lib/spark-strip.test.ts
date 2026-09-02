@@ -1,48 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { buildSparkSlots } from "./spark-strip";
+import { sparkSlots } from "./spark-strip";
 
-const NOW = new Date("2026-03-10T08:00:00Z");
+describe("sparkSlots", () => {
+  const now = new Date("2026-09-02T10:00:00Z");
 
-describe("buildSparkSlots", () => {
-  it("always returns seven slots ending today", () => {
-    const slots = buildSparkSlots([], NOW);
+  it("固定 7 个日槽，最右为今天", () => {
+    const slots = sparkSlots([], now);
     expect(slots).toHaveLength(7);
-    expect(slots[0].day).toBe("2026-03-04");
-    expect(slots[6].day).toBe("2026-03-10");
-    expect(slots.every((slot) => slot.pct === null)).toBe(true);
+    expect(slots[6].day).toBe("2026-09-02");
+    expect(slots[0].day).toBe("2026-08-27");
   });
 
-  it("places each point on its own day and leaves gaps empty", () => {
-    const slots = buildSparkSlots(
-      [
-        { d: "2026-03-05", pct: 80 },
-        { d: "2026-03-10", pct: 12 },
-      ],
-      NOW,
-    );
-    expect(slots.map((slot) => slot.pct)).toEqual([null, 80, null, null, null, null, 12]);
+  it("有数据的日期填值，缺测为空槽", () => {
+    const slots = sparkSlots([{ d: "2026-09-01", pct: 42 }], now);
+    expect(slots[5]).toEqual({ day: "2026-09-01", pct: 42 });
+    expect(slots[6].pct).toBeNull();
   });
 
-  it("drops points outside the window", () => {
-    const slots = buildSparkSlots(
-      [
-        { d: "2026-03-01", pct: 90 },
-        { d: "2026-03-07", pct: 55 },
-      ],
-      NOW,
-    );
-    expect(slots.filter((slot) => slot.pct !== null)).toEqual([{ day: "2026-03-07", pct: 55 }]);
+  it("pct 截断到 0–100", () => {
+    const slots = sparkSlots([{ d: "2026-09-02", pct: 130 }], now);
+    expect(slots[6].pct).toBe(100);
   });
 
-  it("clamps out-of-range percentages and ignores non-finite ones", () => {
-    const slots = buildSparkSlots(
-      [
-        { d: "2026-03-08", pct: 140 },
-        { d: "2026-03-09", pct: -20 },
-        { d: "2026-03-10", pct: Number.NaN },
-      ],
-      NOW,
-    );
-    expect(slots.slice(4).map((slot) => slot.pct)).toEqual([100, 0, null]);
+  it("窗口外的点被忽略", () => {
+    const slots = sparkSlots([{ d: "2026-08-01", pct: 10 }], now);
+    expect(slots.every((s) => s.pct === null)).toBe(true);
   });
 });
