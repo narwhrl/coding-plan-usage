@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProviderView } from "@/lib/types";
@@ -64,11 +64,14 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{t("add")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {t("add")}
+        </CardTitle>
+        <CardDescription>{t("addHint")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="add-provider">{t("provider")}</Label>
+        <Field>
+          <FieldLabel htmlFor="add-provider">{t("provider")}</FieldLabel>
           <Select
             items={providers.map((p) => ({ label: p.name, value: p.id }))}
             value={providerId || null}
@@ -79,9 +82,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
             }}
           >
             <SelectTrigger id="add-provider" data-testid="provider-select">
-              <SelectValue placeholder="—">
-                {provider?.name ?? null}
-              </SelectValue>
+              <SelectValue placeholder={t("selectProvider")}>{provider?.name ?? null}</SelectValue>
             </SelectTrigger>
             <SelectPopup>
               {providers.map((p) => (
@@ -91,11 +92,11 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               ))}
             </SelectPopup>
           </Select>
-        </div>
+        </Field>
 
         {provider?.fields.map((field) => (
-          <div key={field.key} className="grid gap-2">
-            <Label htmlFor={`add-cred-${field.key}`}>{field.label}</Label>
+          <Field key={field.key}>
+            <FieldLabel htmlFor={`add-cred-${field.key}`}>{field.label}</FieldLabel>
             {field.kind === "json" ? (
               <Textarea
                 id={`add-cred-${field.key}`}
@@ -116,17 +117,18 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 data-testid={`cred-${field.key}`}
               />
             )}
-          </div>
+          </Field>
         ))}
 
-        <div className="grid gap-2">
-          <Label htmlFor="add-label">{t("label")}</Label>
+        <Field>
+          <FieldLabel htmlFor="add-label">{t("label")}</FieldLabel>
           <Input id="add-label" value={label} onValueChange={setLabel} placeholder={provider?.name} />
-        </div>
+          <FieldDescription>{t("labelHint")}</FieldDescription>
+        </Field>
 
         {provider?.baseUrlOptions && provider.baseUrlOptions.length > 0 ? (
-          <div className="grid gap-2">
-            <Label htmlFor="add-baseurl">{t("baseUrl")}</Label>
+          <Field>
+            <FieldLabel htmlFor="add-baseurl">{t("baseUrl")}</FieldLabel>
             <Select
               items={provider.baseUrlOptions.map((o) => ({ label: o.label, value: o.value }))}
               value={baseUrl || provider.baseUrlOptions[0].value}
@@ -145,12 +147,12 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 ))}
               </SelectPopup>
             </Select>
-          </div>
+          </Field>
         ) : null}
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="add-interval">{t("interval")}</Label>
+          <Field>
+            <FieldLabel htmlFor="add-interval">{t("interval")}</FieldLabel>
             <Input
               id="add-interval"
               inputMode="numeric"
@@ -158,9 +160,10 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               onValueChange={setIntervalValue}
               placeholder="15"
             />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="add-warn">{t("warnPct")}</Label>
+            <FieldDescription>{t("overrideHint")}</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="add-warn">{t("warnPct")}</FieldLabel>
             <Input
               id="add-warn"
               inputMode="numeric"
@@ -168,11 +171,16 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               onValueChange={setWarnPct}
               placeholder="20"
             />
-          </div>
+            <FieldDescription>{t("overrideHint")}</FieldDescription>
+          </Field>
         </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {savedMessage ? <p className="text-sm text-muted-foreground" data-testid="account-saved">{savedMessage}</p> : null}
+        {error ? <p className="text-sm text-destructive-foreground">{error}</p> : null}
+        {savedMessage ? (
+          <p className="text-sm text-muted-foreground" data-testid="account-saved">
+            {savedMessage}
+          </p>
+        ) : null}
 
         <Button onClick={save} disabled={busy || !provider} data-testid="account-save">
           {busy ? t("saving") : t("save")}

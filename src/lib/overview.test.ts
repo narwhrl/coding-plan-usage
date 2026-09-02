@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
-import { overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
+import {
+  accountGridClassName,
+  accountSection,
+  nextResetWindow,
+  overviewKpis,
+  partitionAccounts,
+  sortAccountsByUrgency,
+  tightestWindow,
+} from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
   return {
@@ -67,7 +75,14 @@ describe("overviewKpis", () => {
       lastOkSnapshot: snap([window(4, new Date(Date.now() + 60_000).toISOString())]),
     });
 
-    expect(overviewKpis([account])).toEqual({ enabledTotal: 0, errorCount: 0, tightest: null, nextReset: null });
+    expect(overviewKpis([account])).toEqual({
+      total: 1,
+      enabledTotal: 0,
+      disabledCount: 1,
+      errorCount: 0,
+      tightest: null,
+      nextReset: null,
+    });
   });
 
   it("ignores reset timestamps in the past", () => {
@@ -103,5 +118,42 @@ describe("sortAccountsByUrgency", () => {
       "normal-high",
       "disabled",
     ]);
+  });
+});
+
+describe("nextResetWindow", () => {
+  it("returns the soonest future reset and ignores the past", () => {
+    const soon = new Date(Date.now() + 60_000).toISOString();
+    const later = new Date(Date.now() + 3_600_000).toISOString();
+    const past = new Date(Date.now() - 60_000).toISOString();
+    expect(nextResetWindow([window(10, later), window(20, soon), window(5, past)])?.resetAt).toBe(soon);
+    expect(nextResetWindow([window(10, past)])).toBeNull();
+  });
+});
+
+describe("accountSection / partitionAccounts", () => {
+  it("splits error and warn into attention, and keeps disabled separate", () => {
+    const attentionError = mkAccount({ id: "error", latestSnapshot: snap([], "error") });
+    const attentionWarn = mkAccount({ id: "warning", warn: true, latestSnapshot: snap([window(10)]) });
+    const healthy = mkAccount({ id: "ok", latestSnapshot: snap([window(80)]) });
+    const disabled = mkAccount({ id: "off", enabled: false, latestSnapshot: snap([window(1)]) });
+
+    expect(accountSection(attentionError)).toBe("attention");
+    expect(accountSection(attentionWarn)).toBe("attention");
+    expect(accountSection(healthy)).toBe("healthy");
+    expect(accountSection(disabled)).toBe("disabled");
+
+    const parts = partitionAccounts([healthy, disabled, attentionWarn, attentionError]);
+    expect(parts.attention.map((a) => a.id)).toEqual(["error", "warning"]);
+    expect(parts.healthy.map((a) => a.id)).toEqual(["ok"]);
+    expect(parts.disabled.map((a) => a.id)).toEqual(["off"]);
+  });
+});
+
+describe("accountGridClassName", () => {
+  it("stays single-column for one card and two-column from two up", () => {
+    expect(accountGridClassName(1)).toBe("grid gap-4");
+    expect(accountGridClassName(2)).toContain("sm:grid-cols-2");
+    expect(accountGridClassName(4)).not.toContain("lg:grid-cols-3");
   });
 });

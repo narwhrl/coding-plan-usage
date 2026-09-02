@@ -12,10 +12,49 @@ export function tightestWindow(s: SnapshotView | null | undefined): Window | nul
   return best;
 }
 
+/** 单账户窗口里未来最近的一次重置；全部已过期或无 resetAt 返回 null。 */
+export function nextResetWindow(windows: Window[]): Window | null {
+  const now = Date.now();
+  let best: Window | null = null;
+  let bestMs = Infinity;
+  for (const w of windows) {
+    const ms = w.resetAt ? Date.parse(w.resetAt) : Number.NaN;
+    if (!Number.isFinite(ms) || ms <= now || ms >= bestMs) continue;
+    bestMs = ms;
+    best = w;
+  }
+  return best;
+}
+
 /** 展示快照（lastOk ?? latest）全窗口最小数值 pct；无数值窗口返回 undefined。 */
 export function accountMinPct(a: AccountView): number | undefined {
   const w = tightestWindow(a.lastOkSnapshot ?? a.latestSnapshot);
   return w?.remainingPct;
+}
+
+export type AccountSection = "attention" | "healthy" | "disabled";
+
+/** 概览分节：采集失败或余量偏低 → attention，停用单独一节，其余 healthy。 */
+export function accountSection(account: AccountView): AccountSection {
+  if (!account.enabled) return "disabled";
+  if (account.latestSnapshot?.status === "error" || account.warn) return "attention";
+  return "healthy";
+}
+
+export function partitionAccounts(accounts: AccountView[]): Record<AccountSection, AccountView[]> {
+  const result: Record<AccountSection, AccountView[]> = { attention: [], healthy: [], disabled: [] };
+  for (const account of sortAccountsByUrgency(accounts)) {
+    result[accountSection(account)].push(account);
+  }
+  return result;
+}
+
+/**
+ * 账户卡网格列数按「这一节有几张」选，不要按全页总数。
+ * 三列时两张卡会空出右边一格，看起来像没加载完。
+ */
+export function accountGridClassName(count: number): string {
+  return count >= 2 ? "grid gap-4 sm:grid-cols-2" : "grid gap-4";
 }
 
 /**
@@ -37,7 +76,10 @@ export function sortAccountsByUrgency(accounts: AccountView[]): AccountView[] {
 }
 
 export type OverviewKpis = {
+  /** 账户总数，和网格里的卡片数一致。 */
+  total: number;
   enabledTotal: number;
+  disabledCount: number;
   errorCount: number;
   /** 非 error 的 enabled 账户中全局最小 pct 的窗口。 */
   tightest: { account: AccountView; window: Window } | null;
@@ -45,10 +87,17 @@ export type OverviewKpis = {
   nextReset: { account: AccountView; window: Window } | null;
 };
 
-/** KPI 汇总：只统计 enabled 账户。 */
+/** KPI 汇总：额度类指标只看 enabled 账户，计数则给出总数与停用数。 */
 export function overviewKpis(accounts: AccountView[]): OverviewKpis {
   const enabled = accounts.filter((a) => a.enabled);
-  const kpis: OverviewKpis = { enabledTotal: enabled.length, errorCount: 0, tightest: null, nextReset: null };
+  const kpis: OverviewKpis = {
+    total: accounts.length,
+    enabledTotal: enabled.length,
+    disabledCount: accounts.length - enabled.length,
+    errorCount: 0,
+    tightest: null,
+    nextReset: null,
+  };
   let tightestPct = Infinity;
   let nextResetMs = Infinity;
   for (const account of enabled) {

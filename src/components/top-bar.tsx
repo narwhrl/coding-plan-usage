@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useTransition, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -14,15 +14,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import {
+  segmentedControlItemVariants,
+  segmentedControlRootClassName,
+} from "@/lib/segmented-control";
 
-/** 顶栏：产品名 + 语言/主题切换 + 全局刷新。cal.com 式克制灰阶。 */
+/** 顶栏：产品名 + 当前页分段导航 + 图标操作。 */
 export function TopBar({ authEnabled }: { authEnabled: boolean }) {
   const t = useTranslations("nav");
+  const tApp = useTranslations("app");
   const locale = useLocale();
+  const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [refreshing, startRefresh] = useTransition();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const onOverview = pathname === "/" || pathname.startsWith("/accounts/");
+  const onSettings = pathname.startsWith("/settings");
 
   const switchLang = () => {
     const next = locale === "zh" ? "en" : "zh";
@@ -48,6 +58,12 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
     router.refresh();
   };
 
+  const navClassName = (active: boolean) =>
+    cn(
+      segmentedControlItemVariants({ size: "sm", state: "current" }),
+      active && "bg-background text-foreground shadow-sm/5 dark:bg-input",
+    );
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
@@ -55,17 +71,17 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           <span className="flex size-7 items-center justify-center rounded-md bg-primary font-heading text-sm font-semibold text-primary-foreground">
             C
           </span>
-          <span className="font-heading text-base font-semibold tracking-tight">Coding Plan Usage</span>
+          <span className="font-heading text-base font-semibold tracking-tight">{tApp("name")}</span>
         </Link>
-        <nav className="ml-4 hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
-          <Link href="/" className="transition-colors hover:text-foreground">
+        <nav className={cn(segmentedControlRootClassName, "ml-2 hidden sm:flex")} aria-label={tApp("name")}>
+          <Link href="/" aria-current={onOverview ? "page" : undefined} className={navClassName(onOverview)}>
             {t("overview")}
           </Link>
-          <Link href="/settings" className="transition-colors hover:text-foreground">
+          <Link href="/settings" aria-current={onSettings ? "page" : undefined} className={navClassName(onSettings)}>
             {t("settings")}
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-1">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={<Button variant="ghost" size="icon-sm" className="sm:hidden" aria-label={t("menu")} />}
@@ -80,14 +96,22 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
                 <Link
                   href="/"
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-current={onOverview ? "page" : undefined}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground",
+                    onOverview ? "bg-accent text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {t("overview")}
                 </Link>
                 <Link
                   href="/settings"
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-current={onSettings ? "page" : undefined}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-foreground",
+                    onSettings ? "bg-accent text-foreground" : "text-muted-foreground",
+                  )}
                 >
                   {t("settings")}
                 </Link>
@@ -96,28 +120,33 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           </Sheet>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-sm"
             onClick={refreshAll}
             disabled={refreshing}
             aria-label={t("refreshAll")}
           >
             <RefreshCw className={refreshing ? "animate-spin" : undefined} data-testid="refresh-all" />
-            <span className="hidden sm:inline">{t("refreshAll")}</span>
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-sm"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             aria-label={t("theme")}
           >
             <Sun className="hidden dark:block" />
             <Moon className="block dark:hidden" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={switchLang} aria-label={t("language")} data-testid="lang-switch">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={switchLang}
+            aria-label={t("language")}
+            data-testid="lang-switch"
+          >
             {locale === "zh" ? "EN" : "中"}
           </Button>
           {authEnabled ? (
-            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground">
+            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
               {t("logout")}
             </Button>
           ) : null}

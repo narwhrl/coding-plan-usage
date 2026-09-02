@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -16,20 +17,23 @@ import {
   AlertDialogTrigger,
   AlertDialogViewport,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
-import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
 import { AccountAddForm } from "@/components/account-add-form";
+import { AccountStatusBadges } from "@/components/account-status";
 import { CustomProviderForm } from "@/components/custom-provider-form";
+import { PageHeader } from "@/components/page-header";
+import { ProviderMonogram } from "@/components/provider-monogram";
+import { SettingsNav, type SettingsTab } from "@/components/settings-nav";
+import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const router = useRouter();
+  const [tab, setTab] = useState<SettingsTab>("accounts");
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
@@ -73,80 +77,100 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
-      <Tabs defaultValue="accounts">
-        <TabsList>
-          <TabsTab value="accounts">{t("tabAccounts")}</TabsTab>
-          <TabsTab value="custom">{t("tabCustom")}</TabsTab>
-          <TabsTab value="general">{t("tabGeneral")}</TabsTab>
-        </TabsList>
-
-        <TabsContent value="accounts" className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <AccountAddForm providers={providers} onSaved={requestRefresh} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("accounts.list")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {accounts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("accounts.empty")}</p>
-              ) : (
-                accounts.map((account) => (
-                  <div
-                    key={account.id}
-                    className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{account.providerName}</p>
-                      <p className="truncate text-xs text-muted-foreground">{account.label}</p>
+      <PageHeader title={t("title")} description={t("subtitle")} />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+        <SettingsNav
+          value={tab}
+          onValueChange={setTab}
+          label={t("title")}
+          items={[
+            { value: "accounts", label: t("tabAccounts") },
+            { value: "custom", label: t("tabCustom") },
+            { value: "general", label: t("tabGeneral") },
+          ]}
+        />
+        <div className="min-w-0 flex-1">
+          {tab === "accounts" ? (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <AccountAddForm providers={providers} onSaved={requestRefresh} />
+              <Card>
+                <CardHeader>
+                  <CardTitle render={<h2 />} className="text-base">
+                    {t("accounts.list")}
+                  </CardTitle>
+                  <CardDescription>{t("accounts.listHint")}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {accounts.length === 0 ? (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{t("accounts.empty")}</p>
+                      <p className="text-xs text-muted-foreground">{t("accounts.emptyHint")}</p>
                     </div>
-                    {!account.enabled ? <Badge variant="secondary">disabled</Badge> : null}
-                    <AlertDialog>
-                      <AlertDialogTrigger render={<Button variant="ghost" size="sm" />}>
-                        {t("accounts.delete")}
-                      </AlertDialogTrigger>
-                      <AlertDialogPortal>
-                        <AlertDialogBackdrop />
-                        <AlertDialogViewport>
-                          <AlertDialogPopup>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t("accounts.deleteConfirmTitle")}</AlertDialogTitle>
-                              <AlertDialogDescription>{t("accounts.deleteConfirmBody")}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogClose>{t("accounts.cancel")}</AlertDialogClose>
-                              <AlertDialogClose
-                                className="bg-destructive text-white hover:bg-destructive/90"
-                                onClick={() => void removeAccount(account.id)}
-                              >
-                                {t("accounts.delete")}
-                              </AlertDialogClose>
-                            </AlertDialogFooter>
-                          </AlertDialogPopup>
-                        </AlertDialogViewport>
-                      </AlertDialogPortal>
-                    </AlertDialog>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  ) : (
+                    accounts.map((account) => (
+                      <div
+                        key={account.id}
+                        className="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
+                      >
+                        <ProviderMonogram name={account.providerName} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/accounts/${account.id}`}
+                            className="block truncate text-sm font-medium hover:underline"
+                          >
+                            {account.providerName}
+                          </Link>
+                          <p className="truncate text-xs text-muted-foreground">{account.label}</p>
+                        </div>
+                        <AccountStatusBadges account={account} />
+                        <AlertDialog>
+                          <AlertDialogTrigger render={<Button variant="ghost" size="sm" />}>
+                            {t("accounts.delete")}
+                          </AlertDialogTrigger>
+                          <AlertDialogPortal>
+                            <AlertDialogBackdrop />
+                            <AlertDialogViewport>
+                              <AlertDialogPopup>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t("accounts.deleteConfirmTitle")}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t("accounts.deleteConfirmBody")}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogClose>{t("accounts.cancel")}</AlertDialogClose>
+                                  <AlertDialogClose
+                                    className="bg-destructive text-white hover:bg-destructive/90"
+                                    onClick={() => void removeAccount(account.id)}
+                                  >
+                                    {t("accounts.delete")}
+                                  </AlertDialogClose>
+                                </AlertDialogFooter>
+                              </AlertDialogPopup>
+                            </AlertDialogViewport>
+                          </AlertDialogPortal>
+                        </AlertDialog>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
 
-        <TabsContent value="custom">
-          <CustomProviderForm providers={providers} onSaved={requestRefresh} />
-        </TabsContent>
+          {tab === "custom" ? <CustomProviderForm providers={providers} onSaved={requestRefresh} /> : null}
 
-        <TabsContent value="general">
-          <GeneralSettingsForm
-            key={settings ? `${settings.defaultIntervalMinutes}:${settings.warnPct}` : "loading"}
-            settings={settings}
-            onSaved={requestRefresh}
-            saved={generalSaved}
-            onSavedChange={setGeneralSaved}
-          />
-        </TabsContent>
-      </Tabs>
+          {tab === "general" ? (
+            <GeneralSettingsForm
+              key={settings ? `${settings.defaultIntervalMinutes}:${settings.warnPct}` : "loading"}
+              settings={settings}
+              onSaved={requestRefresh}
+              saved={generalSaved}
+              onSavedChange={setGeneralSaved}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -163,6 +187,7 @@ function GeneralSettingsForm({
   onSavedChange: (saved: boolean) => void;
 }) {
   const t = useTranslations("settings.general");
+  const tCommon = useTranslations("common");
   const [interval, setIntervalValue] = useState(() => String(settings?.defaultIntervalMinutes ?? ""));
   const [warnPct, setWarnPct] = useState(() => String(settings?.warnPct ?? ""));
   const [busy, setBusy] = useState(false);
@@ -198,11 +223,14 @@ function GeneralSettingsForm({
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle className="text-base">{t("title")}</CardTitle>
+        <CardTitle render={<h2 />} className="text-base">
+          {t("title")}
+        </CardTitle>
+        <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2">
-          <Label htmlFor="general-interval">{t("defaultInterval")}</Label>
+        <Field>
+          <FieldLabel htmlFor="general-interval">{t("defaultInterval")}</FieldLabel>
           <Input
             id="general-interval"
             inputMode="numeric"
@@ -210,9 +238,12 @@ function GeneralSettingsForm({
             onValueChange={setIntervalValue}
             data-testid="general-interval"
           />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="general-warn">{t("warnPct")}</Label>
+          <FieldDescription>
+            {t("defaultIntervalHint")} · {tCommon("minutes")}
+          </FieldDescription>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
           <Input
             id="general-warn"
             inputMode="numeric"
@@ -220,7 +251,10 @@ function GeneralSettingsForm({
             onValueChange={setWarnPct}
             data-testid="general-warn"
           />
-        </div>
+          <FieldDescription>
+            {t("warnPctHint")} · {tCommon("percent")}
+          </FieldDescription>
+        </Field>
         <Separator />
         <div className="flex items-center gap-3">
           <Button onClick={save} disabled={busy || !settings} data-testid="general-save">
