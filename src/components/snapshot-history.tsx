@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { quotaTextClassName } from "@/components/quota-bar";
 import { shortDateTime, windowName, windowPctText } from "@/lib/format";
 import type { HistorySnapshot } from "@/lib/types";
@@ -24,7 +25,7 @@ export function SnapshotHistory({
   history,
   warnPct,
 }: {
-  history: HistorySnapshot[];
+  history: HistorySnapshot[] | null;
   warnPct: number;
 }) {
   const t = useTranslations();
@@ -33,7 +34,7 @@ export function SnapshotHistory({
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
 
-  const rows = history.slice().reverse();
+  const rows = (history ?? []).slice().reverse();
   const visible = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 
   return (
@@ -44,7 +45,13 @@ export function SnapshotHistory({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {rows.length === 0 ? (
+        {history === null ? (
+          <div className="space-y-2" aria-busy="true">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="h-8" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">{tDetail("historyEmpty")}</p>
         ) : (
           <>

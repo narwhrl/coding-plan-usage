@@ -101,6 +101,8 @@
     "enabled": "Enabled",
     "credentials": "Credentials (leave empty to keep)",
     "noSnapshots": "Not enough snapshots yet — a trend needs at least two successful fetches",
+    "rangeSparse": "Too few snapshots in this range — try a longer one",
+    "rangeSparseAction": "Show all snapshots",
     "notFound": "This account no longer exists",
     "notFoundHint": "It may have been deleted, or the ID in the link is wrong.",
     "summaryTightest": "Tightest quota",

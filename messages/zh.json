@@ -101,6 +101,8 @@
     "enabled": "启用",
     "credentials": "凭证（留空保持不变）",
     "noSnapshots": "快照不足，至少需要两次成功采集才能画出趋势",
+    "rangeSparse": "该时间范围内的快照不足，换个更长的范围看看",
+    "rangeSparseAction": "查看全部快照",
     "notFound": "账户不存在或已被删除",
     "notFoundHint": "它可能已被删除，或链接里的 ID 不对。",
     "summaryTightest": "最紧额度",

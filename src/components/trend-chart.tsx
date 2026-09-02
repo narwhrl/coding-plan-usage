@@ -12,7 +12,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { shortDateTime, shortTime, windowName } from "@/lib/format";
@@ -40,6 +42,10 @@ export function TrendChart({
   const locale = useLocale();
   const [range, setRange] = useState<RangeValue>("7d");
 
+  const loading = history === null;
+  // 整段历史够画线、但当前范围内点数不足时，问题是范围太窄而不是采集太少。
+  const rangeTooNarrow = (history?.length ?? 0) > 1;
+
   const { data, series } = useMemo(
     () =>
       buildTrendSeries(
@@ -60,6 +66,7 @@ export function TrendChart({
         <CardAction>
           <ToggleGroup
             value={[range]}
+            disabled={loading}
             onValueChange={(value) => {
               const next = value[0];
               if (RANGES.some((r) => r.value === next)) setRange(next as RangeValue);
@@ -74,7 +81,12 @@ export function TrendChart({
         </CardAction>
       </CardHeader>
       <CardContent>
-        {data.length > 1 ? (
+        {loading ? (
+          <div className="space-y-3" aria-busy="true">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-64 rounded-xl" />
+          </div>
+        ) : data.length > 1 ? (
           <>
             <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
               {series.map((name, index) => (
@@ -137,7 +149,21 @@ export function TrendChart({
             </div>
           </>
         ) : (
-          <p className="py-10 text-center text-sm text-muted-foreground">{tDetail("noSnapshots")}</p>
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              {rangeTooNarrow ? tDetail("rangeSparse") : tDetail("noSnapshots")}
+            </p>
+            {rangeTooNarrow && range !== "all" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRange("all")}
+                data-testid="trend-widen-range"
+              >
+                {tDetail("rangeSparseAction")}
+              </Button>
+            ) : null}
+          </div>
         )}
       </CardContent>
     </Card>

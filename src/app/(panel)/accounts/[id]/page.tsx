@@ -82,28 +82,30 @@ export default function AccountDetailPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function load() {
-      const [accountsRes, historyRes, providersRes] = await Promise.all([
-        fetch("/api/accounts"),
-        fetch(`/api/accounts/${id}/snapshots`),
-        fetch("/api/providers"),
-      ]);
-      if (accountsRes.ok) {
-        const data = (await accountsRes.json()) as { accounts: AccountView[] };
-        if (!ignore) setAccount(data.accounts.find((item) => item.id === id) ?? null);
+    // 三个请求各自落地，慢的快照接口不该拖住头部和窗口卡片的首屏。
+    async function load<T>(url: string, apply: (data: T) => void) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok || ignore) return;
+        const data = (await res.json()) as T;
+        if (!ignore) apply(data);
+      } catch {
+        // 网络失败按“无数据”处理，页面留在空态而不是骨架屏。
       }
-      if (historyRes.ok) {
-        const data = (await historyRes.json()) as { snapshots: HistorySnapshot[] };
-        if (!ignore) setHistory(data.snapshots);
-      }
-      if (providersRes.ok) {
-        const data = (await providersRes.json()) as { providers: ProviderView[] };
-        if (!ignore) setProviders(data.providers);
-      }
-      if (!ignore) setLoaded(true);
     }
 
-    void load();
+    void load<{ accounts: AccountView[] }>("/api/accounts", (data) =>
+      setAccount(data.accounts.find((item) => item.id === id) ?? null),
+    ).finally(() => {
+      if (!ignore) setLoaded(true);
+    });
+    void load<{ snapshots: HistorySnapshot[] }>(`/api/accounts/${id}/snapshots`, (data) =>
+      setHistory(data.snapshots),
+    );
+    void load<{ providers: ProviderView[] }>("/api/providers", (data) =>
+      setProviders(data.providers),
+    );
+
     return () => {
       ignore = true;
     };
@@ -329,11 +331,7 @@ export default function AccountDetailPage() {
 
       <TrendChart history={history} warnPct={account.warnThreshold} />
 
-      {history ? (
-        <SnapshotHistory history={history} warnPct={account.warnThreshold} />
-      ) : (
-        <Skeleton className="h-48 rounded-2xl" />
-      )}
+      <SnapshotHistory history={history} warnPct={account.warnThreshold} />
 
       <p className="sr-only" aria-live="polite">
         {refreshing ? tCommon("loading") : ""}
