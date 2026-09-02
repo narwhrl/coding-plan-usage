@@ -75,6 +75,9 @@ export default function OverviewPage() {
   }
 
   const kpis = overviewKpis(accounts);
+  // 停用账户也占网格里的一张卡，所以 KPI 主数字用总账户数，停用数退到副行，
+  // 避免「账户 3」旁边摆着 4 张卡的口径错位。
+  const disabledCount = accounts.length - kpis.enabledTotal;
   const sorted = sortAccountsByUrgency(accounts);
   const needsAttention = (a: AccountView) =>
     a.enabled && (a.latestSnapshot?.status === "error" || a.warn);
@@ -115,11 +118,10 @@ export default function OverviewPage() {
             <StatStripItem
               data-testid="kpi-card"
               label={t("kpiAccounts")}
-              // 数字对齐网格里的卡片数，异常/停用退到副行，否则「账户 3」旁边摆 4 张卡。
-              value={String(kpis.total)}
+              value={String(accounts.length)}
               hint={[
                 kpis.errorCount > 0 ? t("kpiErrors", { count: kpis.errorCount }) : null,
-                kpis.disabledCount > 0 ? t("kpiDisabled", { count: kpis.disabledCount }) : null,
+                disabledCount > 0 ? t("kpiDisabled", { count: disabledCount }) : null,
               ]
                 .filter(Boolean)
                 .join(" · ")
