@@ -28,6 +28,8 @@ export type AccountConfig = {
   intervalMinutes?: number;
   warnPct?: number;
   baseUrl?: string;
+  /** 种子演示账户标记：手动刷新跳过真实采集（仅脚本写入，API schema 剥离该键）。 */
+  demo?: boolean;
 };
 
 export type AccountView = {
