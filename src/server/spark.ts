@@ -16,7 +16,7 @@ export function parseWindows(text: string | null): { remainingPct?: number }[] {
 
 
 /**
- * 近 7 天每日最紧值序列（概览卡 `SparkStrip` 的数据源）。
+ * 近 7 天每日最紧值序列（概览 sparkline 数据源）。
  *
  * 规则：
  * - 日期桶 = `fetchedAt.slice(0, 10)`（ISO UTC 前缀，字典序即可比较）。
