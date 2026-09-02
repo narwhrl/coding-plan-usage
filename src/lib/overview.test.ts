@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
-import { overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
+import { nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
   return {
@@ -42,6 +42,18 @@ describe("tightestWindow", () => {
     expect(tightestWindow(snap([window(55), window(undefined), window(12)]))?.remainingPct).toBe(12);
     expect(tightestWindow(snap([window(undefined)]))).toBeNull();
     expect(tightestWindow(null)).toBeNull();
+  });
+});
+
+describe("nextResetWindow", () => {
+  it("picks the soonest future reset and ignores past or missing ones", () => {
+    const soon = window(50, new Date(Date.now() + 60_000).toISOString());
+    const later = window(50, new Date(Date.now() + 600_000).toISOString());
+    const past = window(50, new Date(Date.now() - 60_000).toISOString());
+
+    expect(nextResetWindow([later, soon, past])).toBe(soon);
+    expect(nextResetWindow([past, window(50)])).toBeNull();
+    expect(nextResetWindow([])).toBeNull();
   });
 });
 

@@ -12,6 +12,20 @@ export function tightestWindow(s: SnapshotView | null | undefined): Window | nul
   return best;
 }
 
+/** 单账户窗口里未来最近的一次重置；全部已过期或无 resetAt 返回 null。 */
+export function nextResetWindow(windows: Window[]): Window | null {
+  const now = Date.now();
+  let best: Window | null = null;
+  let bestMs = Infinity;
+  for (const w of windows) {
+    const ms = w.resetAt ? Date.parse(w.resetAt) : Number.NaN;
+    if (!Number.isFinite(ms) || ms <= now || ms >= bestMs) continue;
+    bestMs = ms;
+    best = w;
+  }
+  return best;
+}
+
 /** 展示快照（lastOk ?? latest）全窗口最小数值 pct；无数值窗口返回 undefined。 */
 export function accountMinPct(a: AccountView): number | undefined {
   const w = tightestWindow(a.lastOkSnapshot ?? a.latestSnapshot);
