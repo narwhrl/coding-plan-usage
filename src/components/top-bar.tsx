@@ -106,6 +106,7 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
             size="icon-sm"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             aria-label={t("theme")}
+            data-testid="theme-switch"
           >
             <Sun className="hidden dark:block" />
             <Moon className="block dark:hidden" />

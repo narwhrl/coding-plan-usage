@@ -64,7 +64,10 @@ export function TrendChart({
           {tDetail("chart")}
         </CardTitle>
         <CardAction>
+          {/* variant/size 必须给在 ToggleGroup 上：ToggleGroupContext 的默认值会盖掉子项的同名 prop。 */}
           <ToggleGroup
+            variant="outline"
+            size="sm"
             value={[range]}
             disabled={loading}
             onValueChange={(value) => {
@@ -73,7 +76,7 @@ export function TrendChart({
             }}
           >
             {RANGES.map((r) => (
-              <ToggleGroupItem key={r.value} value={r.value} variant="outline" size="sm">
+              <ToggleGroupItem key={r.value} value={r.value}>
                 {tDetail(r.messageKey)}
               </ToggleGroupItem>
             ))}

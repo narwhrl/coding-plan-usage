@@ -27,19 +27,18 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
           {t("title")}
         </CardTitle>
         <CardAction>
+          {/* variant/size 必须给在 ToggleGroup 上：ToggleGroupContext 的默认值会盖掉子项的同名 prop。 */}
           <ToggleGroup
+            variant="outline"
+            size="sm"
             value={[metric]}
             onValueChange={(value) => {
               const next = value[0];
               if (next === "tokens" || next === "calls") setMetric(next);
             }}
           >
-            <ToggleGroupItem value="tokens" variant="outline" size="sm">
-              {t("tokens")}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="calls" variant="outline" size="sm">
-              {t("calls")}
-            </ToggleGroupItem>
+            <ToggleGroupItem value="tokens">{t("tokens")}</ToggleGroupItem>
+            <ToggleGroupItem value="calls">{t("calls")}</ToggleGroupItem>
           </ToggleGroup>
         </CardAction>
       </CardHeader>
