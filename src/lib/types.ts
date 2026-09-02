@@ -21,7 +21,7 @@ export type SnapshotView = {
   meta?: Record<string, unknown> | null;
 };
 
-/** 概览 sparkline 点：UTC 日期(YYYY-MM-DD) + 当日最紧 remainingPct。 */
+/** 概览 7 日柱条的一个点：UTC 日期(YYYY-MM-DD) + 当日最紧 remainingPct。 */
 export type SparkPoint = { d: string; pct: number };
 
 export type AccountConfig = {

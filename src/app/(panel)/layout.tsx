@@ -13,8 +13,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     <div className="flex min-h-screen flex-col">
       <TopBar authEnabled={isAuthEnabled()} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
-      <footer className="border-t border-border py-4 text-center text-xs text-muted-foreground">
-        {t("footer")}
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6">
+          <p>{t("name")}</p>
+          <p>{t("footer")}</p>
+        </div>
       </footer>
     </div>
   );

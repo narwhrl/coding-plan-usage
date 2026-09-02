@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
-import { overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
+import { nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
   return {
@@ -45,6 +45,18 @@ describe("tightestWindow", () => {
   });
 });
 
+describe("nextResetWindow", () => {
+  it("picks the soonest future reset and ignores past or missing ones", () => {
+    const soon = window(50, new Date(Date.now() + 60_000).toISOString());
+    const later = window(50, new Date(Date.now() + 600_000).toISOString());
+    const past = window(50, new Date(Date.now() - 60_000).toISOString());
+
+    expect(nextResetWindow([later, soon, past])).toBe(soon);
+    expect(nextResetWindow([past, window(50)])).toBeNull();
+    expect(nextResetWindow([])).toBeNull();
+  });
+});
+
 describe("overviewKpis", () => {
   it("counts an errored account and still uses its display snapshot for the next reset", () => {
     const resetAt = new Date(Date.now() + 60_000).toISOString();
@@ -60,14 +72,21 @@ describe("overviewKpis", () => {
     expect(result.nextReset).toEqual({ account, window: account.lastOkSnapshot?.windows[0] });
   });
 
-  it("excludes disabled accounts from every KPI", () => {
+  it("excludes disabled accounts from the quota KPIs but still counts them", () => {
     const account = mkAccount({
       enabled: false,
       latestSnapshot: snap([], "error"),
       lastOkSnapshot: snap([window(4, new Date(Date.now() + 60_000).toISOString())]),
     });
 
-    expect(overviewKpis([account])).toEqual({ enabledTotal: 0, errorCount: 0, tightest: null, nextReset: null });
+    expect(overviewKpis([account])).toEqual({
+      total: 1,
+      enabledTotal: 0,
+      disabledCount: 1,
+      errorCount: 0,
+      tightest: null,
+      nextReset: null,
+    });
   });
 
   it("ignores reset timestamps in the past", () => {
