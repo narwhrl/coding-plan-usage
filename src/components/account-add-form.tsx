@@ -2,16 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Check, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { ProviderMonogram } from "@/components/provider-monogram";
 import type { ProviderView } from "@/lib/types";
 
 export function AccountAddForm({ providers, onSaved }: { providers: ProviderView[]; onSaved: () => void }) {
   const t = useTranslations("settings.accounts");
+  const tCommon = useTranslations("common");
   const [providerId, setProviderId] = useState("");
   const [label, setLabel] = useState("");
   const [interval, setIntervalValue] = useState("");
@@ -65,10 +75,11 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("add")}</CardTitle>
+        <CardDescription>{t("addHint")}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="add-provider">{t("provider")}</Label>
+      <CardContent className="grid gap-5">
+        <Field>
+          <FieldLabel htmlFor="add-provider">{t("provider")}</FieldLabel>
           <Select
             items={providers.map((p) => ({ label: p.name, value: p.id }))}
             value={providerId || null}
@@ -76,26 +87,28 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               setProviderId(value ?? "");
               setCredentialValues({});
               setBaseUrl("");
+              setSavedMessage(null);
             }}
           >
             <SelectTrigger id="add-provider" data-testid="provider-select">
-              <SelectValue placeholder="—">
-                {provider?.name ?? null}
-              </SelectValue>
+              <SelectValue placeholder={t("selectProvider")}>{provider?.name ?? null}</SelectValue>
             </SelectTrigger>
             <SelectPopup>
               {providers.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  {p.name}
+                  <span className="flex items-center gap-2">
+                    <ProviderMonogram name={p.name} size="sm" />
+                    {p.name}
+                  </span>
                 </SelectItem>
               ))}
             </SelectPopup>
           </Select>
-        </div>
+        </Field>
 
         {provider?.fields.map((field) => (
-          <div key={field.key} className="grid gap-2">
-            <Label htmlFor={`add-cred-${field.key}`}>{field.label}</Label>
+          <Field key={field.key}>
+            <FieldLabel htmlFor={`add-cred-${field.key}`}>{field.label}</FieldLabel>
             {field.kind === "json" ? (
               <Textarea
                 id={`add-cred-${field.key}`}
@@ -116,17 +129,18 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 data-testid={`cred-${field.key}`}
               />
             )}
-          </div>
+          </Field>
         ))}
 
-        <div className="grid gap-2">
-          <Label htmlFor="add-label">{t("label")}</Label>
+        <Field>
+          <FieldLabel htmlFor="add-label">{t("label")}</FieldLabel>
           <Input id="add-label" value={label} onValueChange={setLabel} placeholder={provider?.name} />
-        </div>
+          <FieldDescription>{t("labelHint")}</FieldDescription>
+        </Field>
 
         {provider?.baseUrlOptions && provider.baseUrlOptions.length > 0 ? (
-          <div className="grid gap-2">
-            <Label htmlFor="add-baseurl">{t("baseUrl")}</Label>
+          <Field>
+            <FieldLabel htmlFor="add-baseurl">{t("baseUrl")}</FieldLabel>
             <Select
               items={provider.baseUrlOptions.map((o) => ({ label: o.label, value: o.value }))}
               value={baseUrl || provider.baseUrlOptions[0].value}
@@ -134,7 +148,8 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
             >
               <SelectTrigger id="add-baseurl">
                 <SelectValue>
-                  {provider.baseUrlOptions.find((o) => o.value === baseUrl)?.label ?? provider.baseUrlOptions[0].label}
+                  {provider.baseUrlOptions.find((o) => o.value === baseUrl)?.label ??
+                    provider.baseUrlOptions[0].label}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup>
@@ -145,37 +160,69 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 ))}
               </SelectPopup>
             </Select>
-          </div>
+          </Field>
         ) : null}
 
+        <Separator />
+
         <div className="grid grid-cols-2 gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="add-interval">{t("interval")}</Label>
-            <Input
-              id="add-interval"
-              inputMode="numeric"
-              value={interval}
-              onValueChange={setIntervalValue}
-              placeholder="15"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="add-warn">{t("warnPct")}</Label>
-            <Input
-              id="add-warn"
-              inputMode="numeric"
-              value={warnPct}
-              onValueChange={setWarnPct}
-              placeholder="20"
-            />
-          </div>
+          <Field>
+            <FieldLabel htmlFor="add-interval">{t("interval")}</FieldLabel>
+            <InputGroup>
+              <InputGroupInput
+                id="add-interval"
+                inputMode="numeric"
+                value={interval}
+                onValueChange={setIntervalValue}
+                placeholder="15"
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupText>{tCommon("minutes")}</InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="add-warn">{t("warnPct")}</FieldLabel>
+            <InputGroup>
+              <InputGroupInput
+                id="add-warn"
+                inputMode="numeric"
+                value={warnPct}
+                onValueChange={setWarnPct}
+                placeholder="20"
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupText>%</InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+          </Field>
         </div>
+        <p className="text-xs text-muted-foreground">{t("overrideHint")}</p>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {savedMessage ? <p className="text-sm text-muted-foreground" data-testid="account-saved">{savedMessage}</p> : null}
+        {error ? (
+          <p className="flex items-start gap-1.5 text-sm text-destructive-foreground">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {error}
+          </p>
+        ) : null}
+        {savedMessage ? (
+          <p
+            className="flex items-center gap-1.5 text-sm text-success-foreground"
+            data-testid="account-saved"
+          >
+            <Check className="size-4 shrink-0" aria-hidden="true" />
+            {savedMessage}
+          </p>
+        ) : null}
 
-        <Button onClick={save} disabled={busy || !provider} data-testid="account-save">
-          {busy ? t("saving") : t("save")}
+        <Button
+          onClick={save}
+          loading={busy}
+          disabled={!provider}
+          className="justify-self-start"
+          data-testid="account-save"
+        >
+          {t("save")}
         </Button>
       </CardContent>
     </Card>
