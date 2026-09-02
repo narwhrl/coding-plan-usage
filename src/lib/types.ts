@@ -21,6 +21,9 @@ export type SnapshotView = {
   meta?: Record<string, unknown> | null;
 };
 
+/** 概览 sparkline 点：UTC 日期(YYYY-MM-DD) + 当日最紧 remainingPct。 */
+export type SparkPoint = { d: string; pct: number };
+
 export type AccountConfig = {
   intervalMinutes?: number;
   warnPct?: number;
@@ -42,8 +45,9 @@ export type AccountView = {
   lastOkSnapshot: SnapshotView | null;
   warn: boolean;
   warnThreshold: number;
+  /** 近 7 天每日最紧 remainingPct（服务端聚合，可选以兼容旧响应）。 */
+  spark?: SparkPoint[];
 };
-
 export type CredentialFieldView = {
   key: string;
   label: string;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { accounts, providers, snapshots } from "@/server/db/schema";
 import { requireAuth } from "@/server/auth";
@@ -9,6 +9,7 @@ import { ensureBootstrapped } from "@/server/bootstrap";
 import { encryptSecret } from "@/server/crypto";
 import { getSettings } from "@/server/settings";
 import { getAdapter } from "@/server/adapters/registry";
+import { dailyTightestSeries, parseWindows } from "@/server/spark";
 
 /**
  * GET /api/accounts → 概览数据（卡片所需全部在内）：
@@ -25,6 +26,30 @@ export async function GET(): Promise<NextResponse> {
   for (const p of providerRows) providerById[p.id] = p;
 
   const result = [];
+  const now = new Date();
+  const nowIso = now.toISOString();
+  // 一次批量查询全部账户近 7 天 ok 快照（避免每账户 N+1）。
+  const sparkStartIso = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 6 * 86_400_000,
+  ).toISOString();
+  const sparkRowsAll = db
+    .select({ accountId: snapshots.accountId, fetchedAt: snapshots.fetchedAt, windows: snapshots.windows })
+    .from(snapshots)
+    .where(
+      and(
+        eq(snapshots.status, "ok"),
+        gte(snapshots.fetchedAt, sparkStartIso),
+        lte(snapshots.fetchedAt, nowIso),
+      ),
+    )
+    .orderBy(asc(snapshots.id))
+    .all();
+  const sparkByAccount = new Map<string, { fetchedAt: string; windows: string | null }[]>();
+  for (const row of sparkRowsAll) {
+    const list = sparkByAccount.get(row.accountId) ?? [];
+    list.push(row);
+    sparkByAccount.set(row.accountId, list);
+  }
   for (const account of accountRows) {
     const provider = providerById[account.providerId];
     const latest = db
@@ -37,10 +62,10 @@ export async function GET(): Promise<NextResponse> {
     const lastOk = db
       .select()
       .from(snapshots)
-      .where(eq(snapshots.accountId, account.id))
+      .where(and(eq(snapshots.accountId, account.id), eq(snapshots.status, "ok")))
       .orderBy(desc(snapshots.id))
-      .all()
-      .find((s) => s.status === "ok");
+      .limit(1)
+      .get();
 
     let config: { intervalMinutes?: number; warnPct?: number; baseUrl?: string } = {};
     try {
@@ -49,7 +74,7 @@ export async function GET(): Promise<NextResponse> {
       /* ignore */
     }
     const warnThreshold = config.warnPct ?? settings.warnPct;
-    const warnWindows = (lastOk ? safeParseWindows(lastOk.windows) : []).filter(
+    const warnWindows = (lastOk ? parseWindows(lastOk.windows) : []).filter(
       (w) => typeof w.remainingPct === "number" && w.remainingPct < warnThreshold,
     );
 
@@ -68,6 +93,13 @@ export async function GET(): Promise<NextResponse> {
       lastOkSnapshot: lastOk ? serializeSnapshot(lastOk) : null,
       warn: warnWindows.length > 0,
       warnThreshold,
+      spark: dailyTightestSeries(
+        (sparkByAccount.get(account.id) ?? []).map((r) => ({
+          fetchedAt: r.fetchedAt,
+          windows: parseWindows(r.windows),
+        })),
+        now,
+      ),
     });
   }
   return NextResponse.json({ accounts: result });
@@ -79,19 +111,21 @@ function serializeSnapshot(s: typeof snapshots.$inferSelect) {
     fetchedAt: s.fetchedAt,
     status: s.status,
     error: s.error,
-    windows: safeParseWindows(s.windows),
-    balance: s.balance ? (JSON.parse(s.balance) as { amount: number; currency?: string }) : null,
+    windows: parseWindows(s.windows),
+    balance: parseBalance(s.balance),
     meta: s.raw ? (safeParseMeta(s.raw) as Record<string, unknown> | null) : null,
   };
 }
 
-function safeParseWindows(text: string | null): { remainingPct?: number }[] {
-  if (!text) return [];
+function parseBalance(text: string | null): { amount: number; currency?: string } | null {
+  if (!text) return null;
   try {
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as { amount: number; currency?: string })
+      : null;
   } catch {
-    return [];
+    return null;
   }
 }
 
