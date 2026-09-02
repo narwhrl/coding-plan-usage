@@ -197,6 +197,7 @@
       "sectionRequest": "请求",
       "sectionAuth": "认证",
       "sectionMapping": "字段映射",
+      "sectionTest": "试采校验",
       "subtitle": "把任意返回 JSON 的 REST 端点接成提供商：填地址与字段映射即可，不执行脚本。"
     },
     "general": {

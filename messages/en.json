@@ -197,6 +197,7 @@
       "sectionRequest": "Request",
       "sectionAuth": "Auth",
       "sectionMapping": "Field mapping",
+      "sectionTest": "Verify",
       "subtitle": "Turn any REST endpoint that returns JSON into a provider: give it a URL and field mappings. No scripts are executed."
     },
     "general": {

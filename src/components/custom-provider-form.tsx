@@ -24,7 +24,6 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import type { ProviderView, Window } from "@/lib/types";
 
@@ -282,21 +281,21 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
             </Field>
           </FormSection>
 
-          <Separator />
-
-          <Field>
-            <FieldLabel htmlFor="custom-testkey">{t("testKey")}</FieldLabel>
-            <Input
-              id="custom-testkey"
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              onValueChange={setApiKey}
-              className="sm:max-w-xs"
-              data-testid="custom-testkey"
-            />
-            <FieldDescription>{t("testKeyHint")}</FieldDescription>
-          </Field>
+          <FormSection title={t("sectionTest")}>
+            <Field>
+              <FieldLabel htmlFor="custom-testkey">{t("testKey")}</FieldLabel>
+              <Input
+                id="custom-testkey"
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                onValueChange={setApiKey}
+                className="sm:max-w-xs"
+                data-testid="custom-testkey"
+              />
+              <FieldDescription>{t("testKeyHint")}</FieldDescription>
+            </Field>
+          </FormSection>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={test} loading={testing} disabled={!apiKey.trim()} data-testid="custom-test">
@@ -423,7 +422,11 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
   );
 }
 
-/** 表单分组：小标题 + 可选说明，把长表单切成可扫读的段。 */
+/**
+ * 表单分组：标题 + 可选说明，把长表单切成可扫读的段。
+ * 标题不能比它所辖的字段标签更弱，否则分组读起来像穿插的灰色噪声；
+ * 真正的分段感交给上方的横线，标题只需要和字段标签同级。
+ */
 function FormSection({
   title,
   description,
@@ -434,9 +437,10 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4">
-      <div className="space-y-0.5">
-        <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</h3>
+    <section className="space-y-4 border-t border-border pt-5 first:border-t-0 first:pt-0">
+      <div className="space-y-1">
+        {/* semibold 而非 medium：字段标签已经是 medium，分组标题必须比它高一档。 */}
+        <h3 className="text-sm font-semibold">{title}</h3>
         {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       </div>
       {children}

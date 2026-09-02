@@ -61,7 +61,7 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
 
         {usage.models.length > 0 ? (
           <div className="space-y-3">
-            <h3 className="text-sm font-medium">{t("byModel")}</h3>
+            <h3 className="text-sm font-semibold">{t("byModel")}</h3>
             {usage.models.map((m) => {
               const share = modelsTotal > 0 ? (m.totalTokens / modelsTotal) * 100 : 0;
               return (
@@ -106,7 +106,7 @@ function UsageBarChart({
 }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium">{title}</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
@@ -134,6 +134,8 @@ function UsageBarChart({
               name={label}
               fill={metric === "tokens" ? "var(--chart-1)" : "var(--chart-2)"}
               radius={[3, 3, 0, 0]}
+              // 不设上限时 7 天视图会摊成一整排巨大色块，压过页面其余内容。
+              maxBarSize={40}
             />
           </BarChart>
         </ResponsiveContainer>

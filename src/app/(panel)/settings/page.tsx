@@ -98,8 +98,8 @@ export default function SettingsPage() {
           <TabsTab value="general">{t("tabGeneral")}</TabsTab>
         </TabsList>
 
+        {/* 已有账户排在前面：窄屏下先看到自己的账户，而不是先滚过整张添加表单。 */}
         <TabsContent value="accounts" className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-          <AccountAddForm providers={providers} onSaved={requestRefresh} />
           <Card>
             <CardHeader>
               <CardTitle render={<h2 />} className="text-base">
@@ -177,6 +177,7 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+          <AccountAddForm providers={providers} onSaved={requestRefresh} />
         </TabsContent>
 
         <TabsContent value="custom">

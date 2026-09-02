@@ -4,10 +4,10 @@ import { useTranslations } from "next-intl";
 import type { QuotaTone } from "@/lib/format";
 import type { SparkPoint } from "@/lib/types";
 
-const toneClassNames: Record<QuotaTone, { line: string; dot: string }> = {
-  critical: { line: "stroke-destructive", dot: "fill-destructive" },
-  warning: { line: "stroke-warning", dot: "fill-warning" },
-  normal: { line: "stroke-foreground/40", dot: "fill-foreground/40" },
+const toneClassNames: Record<QuotaTone, { line: string; dot: string; area: string }> = {
+  critical: { line: "stroke-destructive", dot: "fill-destructive", area: "fill-destructive/10" },
+  warning: { line: "stroke-warning", dot: "fill-warning", area: "fill-warning/10" },
+  normal: { line: "stroke-foreground/64", dot: "fill-foreground/64", area: "fill-foreground/5" },
 };
 
 /** 近 7 天每日最紧值 sparkline（折线 + 末点），不足 2 点不渲染。 */
@@ -36,7 +36,10 @@ export function Sparkline({
     ] as const;
   });
   const line = coords.map(([x, y]) => `${x},${y}`).join(" ");
+  const [firstX] = coords[0];
   const [lastX, lastY] = coords[coords.length - 1];
+  // 平稳的额度会画成一条笔直的线；补一块到底边的填充，才不会看成误入的分隔线。
+  const area = `${line} ${lastX},${h} ${firstX},${h}`;
   const min = Math.min(...points.map((p) => p.pct));
   const max = Math.max(...points.map((p) => p.pct));
   const colors = toneClassNames[tone];
@@ -49,6 +52,7 @@ export function Sparkline({
       aria-label={`${t("trend")}: ${min}%-${max}%`}
       data-testid="sparkline"
     >
+      <polygon points={area} stroke="none" className={colors.area} />
       <polyline
         points={line}
         fill="none"
