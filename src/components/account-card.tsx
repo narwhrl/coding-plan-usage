@@ -50,7 +50,9 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
       className={cn(
         "h-full transition-[border-color,box-shadow]",
         isError && "border-destructive/48",
-        account.enabled ? "hover:shadow-sm" : "opacity-72",
+        // 停用态用灰底而不是整卡 opacity：调透明度会把已经是次级色的提示文字一起拖到 AA 以下，
+        // 而「已停用」本来就有徽标说明，底色只需要提供一个远看可辨的线索。
+        account.enabled ? "hover:shadow-sm" : "bg-muted",
       )}
       data-testid="account-card"
       data-account-error={isError ? "true" : undefined}

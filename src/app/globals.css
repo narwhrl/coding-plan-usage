@@ -206,7 +206,11 @@
   --foreground: var(--color-neutral-100);
   --input: --alpha(var(--color-white) / 8%);
   --muted: --alpha(var(--color-white) / 6%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
+  /*
+   * 次级文字要和浅色主题一样能读：neutral-500 系在卡面上只有 3.7:1，抬到 neutral-400
+   * 才回到浅色那边的 5.6:1（提示文案、图表轴标签、未选中的分段项全走这个变量）。
+   */
+  --muted-foreground: var(--color-neutral-400);
   /* 浮层再比卡面亮一档，tooltip/dialog 才能压住下面的卡片。 */
   --popover: color-mix(in srgb, var(--background) 90%, var(--color-white));
   --popover-foreground: var(--color-neutral-100);

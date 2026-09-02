@@ -71,7 +71,9 @@ export function StatStripItem({
       <p
         className={cn(
           "mt-1 truncate font-heading text-xl font-semibold tabular-nums",
-          tone === "critical" && "text-destructive",
+          // 与 quotaTextClassName 同一条规则：读数用 *-foreground。text-xl/600 在 WCAG 里
+          // 仍算小字（要 ≥24px 或 ≥18.66px+700），red-500 的 3.8:1 不够。
+          tone === "critical" && "text-destructive-foreground",
         )}
       >
         {value}

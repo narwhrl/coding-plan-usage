@@ -34,8 +34,16 @@ export function QuotaBar({
   );
 }
 
-/** pct 文本的同色规则，与 QuotaBar 共用分级。 */
+/**
+ * pct 文本的同色规则，与 QuotaBar 共用分级。
+ *
+ * 用 *-foreground 而不是填充色：--destructive 是 red-500，浅色主题里对白底只有 3.7:1，
+ * 窗口行那种 text-sm 的读数过不了 AA；red-700 有 6.4:1，且与 warning 分支的取色一致。
+ */
 export function quotaTextClassName(pct: number | undefined, warnPct: number): string {
   const tone = quotaTone(pct, warnPct);
-  return cn(tone === "critical" && "text-destructive", tone === "warning" && "text-warning-foreground");
+  return cn(
+    tone === "critical" && "text-destructive-foreground",
+    tone === "warning" && "text-warning-foreground",
+  );
 }
