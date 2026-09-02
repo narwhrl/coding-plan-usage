@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /**
- * 指标条：一张卡内若干等宽指标，靠分隔线而不是间隙划分（cal.com 式留白优先）。
+ * 指标条：一张卡内若干等宽指标，靠分隔线而不是间隙划分（留白优先）。
  * 窄屏单列纵向堆叠，sm 起单行等宽；条目数建议 ≤ 4，否则单行会挤。
  */
 export function StatStrip({
@@ -25,7 +25,7 @@ export function StatStrip({
   );
 }
 
-/** 卡内指标块：有边框的小格子，用于卡片内部的次级指标网格。 */
+/** 卡内指标格：带边框的小方块，用于卡片内部的次级指标网格。 */
 export function StatTile({
   label,
   value,
@@ -71,8 +71,8 @@ export function StatStripItem({
       <p
         className={cn(
           "mt-1 truncate font-heading text-xl font-semibold tabular-nums",
-          // 与 quotaTextClassName 同一条规则：读数用 *-foreground。text-xl/600 在 WCAG 里
-          // 仍算小字（要 ≥24px 或 ≥18.66px+700），red-500 的 3.8:1 不够。
+          // text-xl/600 在 WCAG 里仍算小字（大字要 ≥24px 或 ≥18.66px+700），
+          // 所以 critical 用 red-700 系的 foreground 令牌而不是 red-500。
           tone === "critical" && "text-destructive-foreground",
         )}
       >

@@ -2,7 +2,7 @@ import type React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * 所有页面共用的标题区：eyebrow（面包屑等）/ 标题 / 描述 / 右侧操作。
+ * 所有页面共用的标题区：eyebrow（返回链接等）/ 标题 / 描述 / 右侧操作。
  * 统一 h1 排版与 8/12/16 间距节奏，页面里不要再各写一遍 h1。
  */
 export function PageHeader({
@@ -35,9 +35,7 @@ export function PageHeader({
             ) : null}
           </div>
         </div>
-        {actions ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
     </div>
   );

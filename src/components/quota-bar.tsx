@@ -10,7 +10,7 @@ const toneClassNames: Record<QuotaTone, string> = {
   normal: "bg-foreground/64",
 };
 
-/** 剩余额度条：颜色由 pct 与账户预警阈值推导，全站同一套分级。 */
+/** 剩余额度条：颜色由 pct 与账户预警阈值推导，全站同一套分级（quotaTone）。 */
 export function QuotaBar({
   pct,
   warnPct,
@@ -24,9 +24,9 @@ export function QuotaBar({
   size?: "default" | "sm";
   className?: string;
 }): React.ReactElement {
-  const value = Math.max(0, Math.min(100, pct));
+  const clamped = Math.max(0, Math.min(100, pct));
   return (
-    <Progress value={value} aria-label={label} className={className}>
+    <Progress value={clamped} aria-label={label} className={cn("gap-1", className)}>
       <ProgressTrack className={size === "sm" ? "h-1" : undefined}>
         <ProgressIndicator className={toneClassNames[quotaTone(pct, warnPct)]} />
       </ProgressTrack>
@@ -34,16 +34,15 @@ export function QuotaBar({
   );
 }
 
-/**
- * pct 文本的同色规则，与 QuotaBar 共用分级。
- *
- * 用 *-foreground 而不是填充色：--destructive 是 red-500，浅色主题里对白底只有 3.7:1，
- * 窗口行那种 text-sm 的读数过不了 AA；red-700 有 6.4:1，且与 warning 分支的取色一致。
- */
-export function quotaTextClassName(pct: number | undefined, warnPct: number): string {
-  const tone = quotaTone(pct, warnPct);
-  return cn(
-    tone === "critical" && "text-destructive-foreground",
-    tone === "warning" && "text-warning-foreground",
-  );
+const toneTextClassNames: Record<QuotaTone, string> = {
+  // 读数用 *-foreground 那一支：填充色 --destructive 是 red-500，浅色下对白底只有
+  // 3.8:1，写数字过不了 AA；red-700/400 才够。
+  critical: "text-destructive-foreground",
+  warning: "text-warning-foreground",
+  normal: undefined as unknown as string,
+};
+
+/** 额度读数的文字色：与 QuotaBar 同一条 quotaTone 规则，但走文字令牌。 */
+export function quotaTextClassName(pct: number, warnPct: number): string | undefined {
+  return toneTextClassNames[quotaTone(pct, warnPct)] || undefined;
 }

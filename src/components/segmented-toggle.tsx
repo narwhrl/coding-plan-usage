@@ -1,45 +1,51 @@
 "use client";
 
+import type React from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  segmentedControlItemVariants,
+  segmentedControlRootClassName,
+} from "@/lib/segmented-control";
+import { cn } from "@/lib/utils";
+
+export type SegmentedOption<T extends string> = { value: T; label: string };
 
 /**
- * 卡头里的分段切换器（指标 / 时间范围）。
- *
- * 两个坑封在这里，别在调用处重写：
- * - variant/size 必须给在 ToggleGroup 上——ToggleGroupContext 的默认值会盖掉子项的同名 prop。
- * - 选中态只有 4%~8% 的底色差，单看背景分不出来；未选中的文字压成 muted 才有第二个线索。
+ * 分段切换：图表指标、时间范围这类「少量互斥选项」的统一控件。
+ * 视觉走 segmented-control 令牌（灰底容器 + 白色选中块），不再用 outline 按钮组。
  */
 export function SegmentedToggle<T extends string>({
+  label,
   value,
   options,
   onValueChange,
-  label,
   disabled,
+  className,
 }: {
-  value: T;
-  options: readonly { value: T; label: string }[];
-  onValueChange: (value: T) => void;
-  /** 分组的可访问名，读屏时先播它再播选项。 */
   label: string;
+  value: T;
+  options: SegmentedOption<T>[];
+  onValueChange: (value: T) => void;
   disabled?: boolean;
-}) {
+  className?: string;
+}): React.ReactElement {
   return (
     <ToggleGroup
-      variant="outline"
-      size="sm"
+      aria-label={label}
       value={[value]}
       disabled={disabled}
-      aria-label={label}
       onValueChange={(next) => {
-        const picked = next[0];
-        if (options.some((option) => option.value === picked)) onValueChange(picked as T);
+        const first = next[0] as T | undefined;
+        if (first !== undefined) onValueChange(first);
       }}
+      className={cn(segmentedControlRootClassName, className)}
     >
       {options.map((option) => (
         <ToggleGroupItem
           key={option.value}
           value={option.value}
-          className="text-muted-foreground data-pressed:text-foreground"
+          aria-label={option.label}
+          className={segmentedControlItemVariants({ size: "sm", state: "pressed" })}
         >
           {option.label}
         </ToggleGroupItem>

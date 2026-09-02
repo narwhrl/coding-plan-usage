@@ -1,55 +1,57 @@
-"use client";
-
+import type React from "react";
 import { useTranslations } from "next-intl";
-import { quotaTone, type QuotaTone } from "@/lib/format";
-import { buildSparkSlots } from "@/lib/spark-strip";
+import { quotaTone } from "@/lib/format";
+import { sparkSlots } from "@/lib/spark-strip";
 import type { SparkPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// 分级沿用全站的 quotaTone；只有正常态压得比额度条更浅——柱子的面积比 1px 的条大得多。
-const barToneClassNames: Record<QuotaTone, string> = {
+const barTones = {
   critical: "bg-destructive",
   warning: "bg-warning",
   normal: "bg-foreground/32",
-};
+} as const;
 
 /**
- * 近 7 天每日最紧额度。
- * 数据是一天一个值，所以画柱不画折线：折线会在缺测的日子之间插值，而这里的空槽本身就是信息。
+ * 近 7 天每日最紧值的迷你柱条：固定 7 个日槽（最右为今天），缺测为空槽。
+ * 和卡片上方的当前额度不是同一个数（每日最紧值 vs 此刻），所以必须带标题，
+ * 不能贴着大数字当装饰。
  */
-export function SparkStrip({ points, warnPct }: { points: SparkPoint[]; warnPct: number }) {
+export function SparkStrip({
+  points,
+  warnPct,
+  className,
+}: {
+  points: SparkPoint[];
+  warnPct: number;
+  className?: string;
+}): React.ReactElement | null {
   const t = useTranslations("overview");
   if (points.length === 0) return null;
-
-  const slots = buildSparkSlots(points);
-  const values = points.map((p) => p.pct);
-  const min = Math.round(Math.min(...values));
-  const max = Math.round(Math.max(...values));
-  const range = min === max ? `${min}%` : `${min}% – ${max}%`;
-
+  const slots = sparkSlots(points);
+  const values = slots.filter((s) => s.pct !== null).map((s) => s.pct as number);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
   return (
-    <div className="space-y-1.5" data-testid="spark-strip">
-      <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-        <span className="truncate">{t("trend")}</span>
-        <span className="shrink-0 tabular-nums">{range}</span>
+    <div className={cn("space-y-1.5", className)} data-testid="spark-strip">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">{t("trend")}</p>
+        <p className="text-xs tabular-nums text-muted-foreground">
+          {min.toFixed(0)}%–{max.toFixed(0)}%
+        </p>
       </div>
-      <div className="flex h-5 items-end gap-1" role="img" aria-label={`${t("trend")}: ${range}`}>
+      <div className="flex h-8 items-end gap-1" role="img" aria-label={`${t("trend")}: ${min.toFixed(0)}%–${max.toFixed(0)}%`}>
         {slots.map((slot) => (
-          <div
+          <span
             key={slot.day}
-            className="relative h-full flex-1 rounded-[3px] bg-foreground/6 dark:bg-foreground/10"
-          >
-            {slot.pct === null ? null : (
-              <div
-                className={cn(
-                  "absolute inset-x-0 bottom-0 rounded-[3px]",
-                  barToneClassNames[quotaTone(slot.pct, warnPct)],
-                )}
-                // 极低的余量也要留一条看得见的底边，否则会和缺测的空槽混淆。
-                style={{ height: `${Math.max(8, slot.pct)}%` }}
-              />
+            title={`${slot.day}: ${slot.pct === null ? "—" : `${slot.pct.toFixed(0)}%`}`}
+            className={cn(
+              "min-w-0 flex-1 rounded-[2px]",
+              slot.pct === null
+                ? "h-px bg-border"
+                : barTones[quotaTone(slot.pct, warnPct)],
             )}
-          </div>
+            style={slot.pct === null ? undefined : { height: `${Math.max(8, slot.pct)}%` }}
+          />
         ))}
       </div>
     </div>

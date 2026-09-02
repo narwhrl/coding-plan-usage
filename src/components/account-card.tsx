@@ -50,8 +50,8 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
       className={cn(
         "h-full transition-[border-color,box-shadow]",
         isError && "border-destructive/48",
-        // 停用态用灰底而不是整卡 opacity：调透明度会把已经是次级色的提示文字一起拖到 AA 以下，
-        // 而「已停用」本来就有徽标说明，底色只需要提供一个远看可辨的线索。
+        // 停用态用灰底而不是整卡 opacity：调透明度会把已经是次级色的提示文字一起拖到
+        // AA 以下，而「已停用」本来就有徽标说明，底色只需要提供一个远看可辨的线索。
         account.enabled ? "hover:shadow-sm" : "bg-muted",
       )}
       data-testid="account-card"
@@ -102,8 +102,15 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         ) : null}
 
         {hero && hero.remainingPct !== undefined ? (
-          <div className="min-w-0">
-            <p className="truncate text-xs text-muted-foreground">{windowName(hero, t)}</p>
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="truncate text-xs text-muted-foreground">{windowName(hero, t)}</p>
+              {heroReset ? (
+                <p className="shrink-0 text-xs text-muted-foreground">
+                  {t("overview.windowReset")} {heroReset}
+                </p>
+              ) : null}
+            </div>
             <p
               className={cn(
                 "font-heading text-3xl font-semibold tabular-nums",
@@ -113,7 +120,16 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
             >
               {windowPctText(hero)}
             </p>
-            <HeroMeta w={hero} reset={heroReset} />
+            <QuotaBar
+              pct={hero.remainingPct}
+              warnPct={account.warnThreshold}
+              label={windowName(hero, t)}
+            />
+            {windowAmountText(hero, unitName(hero.unit, t)) ? (
+              <p className="truncate text-xs tabular-nums text-muted-foreground">
+                {windowAmountText(hero, unitName(hero.unit, t))}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -129,7 +145,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
           <p className="text-sm text-muted-foreground">{t("overview.noData")}</p>
         )}
 
-        {/* 独立成条并加标题：它是「每日最紧值」，和上面的当前额度不是同一个数。 */}
+        {/* 独立成条并自带标题：它是「每日最紧值」，和上面的当前额度不是同一个数。 */}
         <SparkStrip points={account.spark ?? []} warnPct={account.warnThreshold} />
 
         <p className="mt-auto flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
@@ -146,22 +162,6 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
   );
 }
 
-/** hero 窗口的辅助信息：绝对量与重置倒计时各占一行，避免窄卡里被截断。 */
-function HeroMeta({ w, reset }: { w: Window; reset: string | null }) {
-  const t = useTranslations();
-  const amount = windowAmountText(w, unitName(w.unit, t));
-  return (
-    <>
-      {amount ? <p className="truncate text-xs tabular-nums text-muted-foreground">{amount}</p> : null}
-      {reset ? (
-        <p className="truncate text-xs text-muted-foreground">
-          {t("overview.windowReset")} {reset}
-        </p>
-      ) : null}
-    </>
-  );
-}
-
 function WindowRow({ w, warnPct }: { w: Window; warnPct: number }) {
   const t = useTranslations();
   const tTime = useTranslations("time");
@@ -169,22 +169,26 @@ function WindowRow({ w, warnPct }: { w: Window; warnPct: number }) {
   const name = windowName(w, t);
   const amount = windowAmountText(w, unitName(w.unit, t));
   const reset = resetText(w.resetAt, tTime);
+  const pctText = windowPctText(w);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="truncate font-medium">{name}</span>
         <span
-          className={cn("shrink-0 tabular-nums", quotaTextClassName(pct, warnPct))}
+          className={cn(
+            "shrink-0 tabular-nums",
+            pct !== undefined ? quotaTextClassName(pct, warnPct) : "text-muted-foreground",
+          )}
           data-testid="window-value"
         >
-          {windowPctText(w) ?? amount ?? "—"}
+          {pctText ?? amount ?? "—"}
         </span>
       </div>
       {pct !== undefined ? <QuotaBar pct={pct} warnPct={warnPct} label={name} size="sm" /> : null}
       {amount || reset ? (
         <p className="truncate text-xs tabular-nums text-muted-foreground">
           {[
-            windowPctText(w) !== null ? amount : null,
+            pctText !== null ? amount : null,
             reset ? `${t("overview.windowReset")} ${reset}` : null,
           ]
             .filter(Boolean)

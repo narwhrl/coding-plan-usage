@@ -9,8 +9,8 @@ const sizeClassNames = {
 } as const;
 
 /**
- * 提供商标识：永远是两字母 monogram 文本，不引入品牌图标依赖。
- * aria-hidden：提供商名总是以文本形式紧邻出现，读屏不需要重复念字母。
+ * 提供商标识：两字母 monogram。项目约定不加品牌图标依赖（见 docs/design-system.md），
+ * 纯装饰，读屏由旁边的名称文本负责。
  */
 export function ProviderMonogram({
   name,
@@ -29,7 +29,6 @@ export function ProviderMonogram({
         sizeClassNames[size],
         className,
       )}
-      data-slot="provider-monogram"
     >
       {monogram(name)}
     </span>

@@ -1,58 +1,32 @@
-"use client";
-
 import type React from "react";
 import { useTranslations } from "next-intl";
-import { CircleCheck, PauseCircle, TriangleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { TriangleAlert } from "lucide-react";
 import type { AccountView } from "@/lib/types";
 
 /**
- * 账户状态徽标（采集失败 / 余量偏低 / 已停用），概览卡、详情页头、设置列表共用一处。
- * showOk：三者都不成立时补一个「正常」成功态，用于详情页头这种需要明确状态的地方。
+ * 账户状态徽标组：采集失败 / 余量偏低 / 已停用 / 正常。
+ * 停用、失败这类语义交给徽标说明，容器本身不要再叠 opacity——
+ * 整卡调透明度会把已经是次级色的提示文字一起拖到 AA 以下。
  */
-export function AccountStatusBadges({
-  account,
-  showOk = false,
-}: {
-  account: AccountView;
-  showOk?: boolean;
-}): React.ReactElement | null {
+export function AccountStatusBadges({ account }: { account: AccountView }): React.ReactElement {
   const t = useTranslations("overview");
   const isError = account.latestSnapshot?.status === "error";
-  const items: React.ReactNode[] = [];
-
-  if (isError) {
-    items.push(
-      <Badge key="error" variant="error" data-testid="error-badge">
-        <TriangleAlert />
-        {t("error")}
-      </Badge>,
-    );
-  }
-  if (account.warn) {
-    items.push(
-      <Badge key="warn" variant="warning" data-testid="warn-badge">
-        {t("lowQuota")}
-      </Badge>,
-    );
-  }
-  if (!account.enabled) {
-    items.push(
-      <Badge key="disabled" variant="secondary" data-testid="disabled-badge">
-        <PauseCircle />
-        {t("disabled")}
-      </Badge>,
-    );
-  }
-  if (items.length === 0) {
-    if (!showOk) return null;
-    items.push(
-      <Badge key="ok" variant="success" data-testid="ok-badge">
-        <CircleCheck />
-        {t("ok")}
-      </Badge>,
-    );
-  }
-
-  return <>{items}</>;
+  return (
+    <>
+      {isError ? (
+        <Badge variant="error" data-testid="error-badge">
+          {t("error")}
+        </Badge>
+      ) : null}
+      {account.warn ? (
+        <Badge variant="warning" data-testid="warn-badge">
+          <TriangleAlert />
+          {t("lowQuota")}
+        </Badge>
+      ) : null}
+      {!account.enabled ? <Badge variant="secondary">{t("disabled")}</Badge> : null}
+      {/* 正常态不出徽标：分节标题已经说明「正常」，每张卡再挂一个绿标只是噪声。 */}
+    </>
+  );
 }
