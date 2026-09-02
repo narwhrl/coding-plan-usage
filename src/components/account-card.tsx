@@ -9,9 +9,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ChevronRight, Clock, RefreshCw } from "lucide-react";
 import type { AccountView, Window } from "@/lib/types";
 import {
-  countdownText,
-  quotaTone,
   relativeTimeText,
+  resetText,
   unitName,
   windowAmountText,
   windowName,
@@ -22,7 +21,7 @@ import { tightestWindow } from "@/lib/overview";
 import { AccountStatusBadges } from "@/components/account-status";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import { QuotaBar, quotaTextClassName } from "@/components/quota-bar";
-import { Sparkline } from "@/components/sparkline";
+import { SparkStrip } from "@/components/spark-strip";
 
 export function AccountCard({ account, onRefreshed }: { account: AccountView; onRefreshed?: () => void }) {
   const t = useTranslations();
@@ -32,8 +31,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
   const display = account.lastOkSnapshot ?? account.latestSnapshot;
   const isError = account.latestSnapshot?.status === "error";
   const hero = tightestWindow(display);
-  const heroReset = countdownText(hero?.resetAt, tTime);
-  const heroTone = quotaTone(hero?.remainingPct, account.warnThreshold);
+  const heroReset = resetText(hero?.resetAt, tTime);
   const lastSuccess = relativeTimeText(account.lastOkSnapshot?.fetchedAt, tTime);
 
   const refresh = async () => {
@@ -102,21 +100,18 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         ) : null}
 
         {hero && hero.remainingPct !== undefined ? (
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-xs text-muted-foreground">{windowName(hero, t)}</p>
-              <p
-                className={cn(
-                  "font-heading text-3xl font-semibold tabular-nums",
-                  quotaTextClassName(hero.remainingPct, account.warnThreshold),
-                )}
-                data-testid="hero-pct"
-              >
-                {windowPctText(hero)}
-              </p>
-              <HeroMeta w={hero} reset={heroReset} />
-            </div>
-            <Sparkline points={account.spark ?? []} tone={heroTone} />
+          <div className="min-w-0">
+            <p className="truncate text-xs text-muted-foreground">{windowName(hero, t)}</p>
+            <p
+              className={cn(
+                "font-heading text-3xl font-semibold tabular-nums",
+                quotaTextClassName(hero.remainingPct, account.warnThreshold),
+              )}
+              data-testid="hero-pct"
+            >
+              {windowPctText(hero)}
+            </p>
+            <HeroMeta w={hero} reset={heroReset} />
           </div>
         ) : null}
 
@@ -131,6 +126,9 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         ) : (
           <p className="text-sm text-muted-foreground">{t("overview.noData")}</p>
         )}
+
+        {/* 独立成条并加标题：它是「每日最紧值」，和上面的当前额度不是同一个数。 */}
+        <SparkStrip points={account.spark ?? []} warnPct={account.warnThreshold} />
 
         <p className="mt-auto flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
           <Clock className="size-3.5" aria-hidden="true" />
@@ -168,7 +166,7 @@ function WindowRow({ w, warnPct }: { w: Window; warnPct: number }) {
   const pct = w.remainingPct;
   const name = windowName(w, t);
   const amount = windowAmountText(w, unitName(w.unit, t));
-  const reset = countdownText(w.resetAt, tTime);
+  const reset = resetText(w.resetAt, tTime);
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-sm">

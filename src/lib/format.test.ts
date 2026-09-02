@@ -4,6 +4,7 @@ import {
   countdownText,
   quotaTone,
   relativeTimeText,
+  resetText,
   unitName,
   windowAmountText,
   windowName,
@@ -97,6 +98,21 @@ describe("countdownText", () => {
   it("returns null for missing or unparsable input", () => {
     expect(countdownText(null, t)).toBeNull();
     expect(countdownText("not-a-date", t)).toBeNull();
+  });
+});
+
+describe("resetText", () => {
+  const t = makeT([]);
+
+  it("counts down to a future reset and looks back at a past one", () => {
+    const now = Date.now();
+    expect(resetText(new Date(now + 90 * 60_000).toISOString(), t)).toBe("inHours(count=2)");
+    expect(resetText(new Date(now - 3 * 3_600_000).toISOString(), t)).toBe("ago(time=hours(count=3))");
+  });
+
+  it("returns null for missing or unparsable input", () => {
+    expect(resetText(null, t)).toBeNull();
+    expect(resetText("not-a-date", t)).toBeNull();
   });
 });
 

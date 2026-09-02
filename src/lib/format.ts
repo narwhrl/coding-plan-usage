@@ -64,6 +64,17 @@ export function countdownText(resetAt: string | null | undefined, t: Translate):
   return t("inDays", { count: Math.round(hours / 24) });
 }
 
+/**
+ * 窗口重置时刻的人读文本：未来给倒计时，已过去给「n 分钟前」。
+ * 采集有间隔，快照里的 resetAt 可能已经过期；那时说「0 分钟后」是假的。
+ */
+export function resetText(resetAt: string | null | undefined, t: Translate): string | null {
+  if (!resetAt) return null;
+  const ms = Date.parse(resetAt);
+  if (!Number.isFinite(ms)) return null;
+  return ms > Date.now() ? countdownText(resetAt, t) : relativeTimeText(resetAt, t);
+}
+
 /** 相对过去时间，本地化（t 绑定到 time 命名空间）。 */
 export function relativeTimeText(iso: string | null | undefined, t: Translate): string | null {
   if (!iso) return null;
