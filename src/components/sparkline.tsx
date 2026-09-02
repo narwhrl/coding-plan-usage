@@ -1,10 +1,23 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { QuotaTone } from "@/lib/format";
 import type { SparkPoint } from "@/lib/types";
 
-/** 近 7 天每日最紧值单线 sparkline；不足 2 点不渲染。 */
-export function Sparkline({ points }: { points: SparkPoint[] }) {
+const toneClassNames: Record<QuotaTone, { line: string; dot: string }> = {
+  critical: { line: "stroke-destructive", dot: "fill-destructive" },
+  warning: { line: "stroke-warning", dot: "fill-warning" },
+  normal: { line: "stroke-foreground/40", dot: "fill-foreground/40" },
+};
+
+/** 近 7 天每日最紧值 sparkline（折线 + 末点），不足 2 点不渲染。 */
+export function Sparkline({
+  points,
+  tone = "normal",
+}: {
+  points: SparkPoint[];
+  tone?: QuotaTone;
+}) {
   const t = useTranslations("overview");
   if (points.length < 2) return null;
   const w = 100;
@@ -22,8 +35,11 @@ export function Sparkline({ points }: { points: SparkPoint[] }) {
       h - pad - (Math.max(0, Math.min(100, p.pct)) / 100) * (h - 2 * pad),
     ] as const;
   });
+  const line = coords.map(([x, y]) => `${x},${y}`).join(" ");
+  const [lastX, lastY] = coords[coords.length - 1];
   const min = Math.min(...points.map((p) => p.pct));
   const max = Math.max(...points.map((p) => p.pct));
+  const colors = toneClassNames[tone];
   return (
     <svg
       viewBox="0 0 100 32"
@@ -34,13 +50,22 @@ export function Sparkline({ points }: { points: SparkPoint[] }) {
       data-testid="sparkline"
     >
       <polyline
-        points={coords.map(([x, y]) => `${x},${y}`).join(" ")}
+        points={line}
         fill="none"
         strokeWidth={2}
         vectorEffect="non-scaling-stroke"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="stroke-chart-1"
+        className={colors.line}
+      />
+      {/* preserveAspectRatio=none 会把圆拉扁，所以末点用 1×1 方块而不是 circle。 */}
+      <rect
+        x={lastX - 1}
+        y={lastY - 1}
+        width={2}
+        height={2}
+        className={colors.dot}
+        stroke="none"
       />
     </svg>
   );
