@@ -75,7 +75,7 @@ export async function GET(): Promise<NextResponse> {
     }
     const warnThreshold = config.warnPct ?? settings.warnPct;
     const warnWindows = (lastOk ? parseWindows(lastOk.windows) : []).filter(
-      (w) => typeof w.remainingPct === "number" && w.remainingPct < warnThreshold,
+      (w) => !w.minor && typeof w.remainingPct === "number" && w.remainingPct < warnThreshold,
     );
 
     result.push({

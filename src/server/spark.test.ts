@@ -89,4 +89,12 @@ describe("dailyTightestSeries", () => {
     );
     expect(points.map((p) => p.d)).toEqual(["2026-08-29", "2026-09-01", "2026-09-02"]);
   });
+
+  it("ignores minor windows when taking the daily min", () => {
+    const points = dailyTightestSeries(
+      [{ fetchedAt: "2026-09-01T10:00:00Z", windows: [{ remainingPct: 60 }, { minor: true, remainingPct: 2 }] }],
+      NOW,
+    );
+    expect(points).toEqual([{ d: "2026-09-01", pct: 60 }]);
+  });
 });

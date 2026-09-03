@@ -1,12 +1,14 @@
 import type { SparkPoint } from "@/lib/types";
-/** 解析 windows JSON 列；非数组或非对象元素及空对象一律剔除（历史脏数据防御）。 */
-export function parseWindows(text: string | null): { remainingPct?: number }[] {
+/** windows JSON 元素（对象原样透传，仅收窄读取字段）；非数组或非对象元素及空对象一律剔除（历史脏数据防御）。 */
+export function parseWindows(
+  text: string | null,
+): ({ remainingPct?: number; minor?: boolean } & Record<string, unknown>)[] {
   if (!text) return [];
   try {
     const parsed: unknown = JSON.parse(text);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
-      (w): w is { remainingPct?: number } =>
+      (w): w is { remainingPct?: number; minor?: boolean } & Record<string, unknown> =>
         typeof w === "object" && w !== null && !Array.isArray(w) && Object.keys(w).length > 0,
     );
   } catch {
@@ -20,12 +22,12 @@ export function parseWindows(text: string | null): { remainingPct?: number }[] {
  *
  * 规则：
  * - 日期桶 = `fetchedAt.slice(0, 10)`（ISO UTC 前缀，字典序即可比较）。
- * - 每行取全部窗口中数值型 `remainingPct` 的最小值（无数值窗口则跳过该行）。
+ * - 每行取全部窗口中数值型 `remainingPct` 的最小值（`minor` 车道跳过；无数值窗口则跳过该行）。
  * - 同一天多行取最小值。
  * - 只保留 [UTC 当日零点 − 6 天, now] 区间内的行；非法/未来时间戳剔除。
  */
 export function dailyTightestSeries(
-  rows: { fetchedAt: string; windows: { remainingPct?: number }[] }[],
+  rows: { fetchedAt: string; windows: ({ remainingPct?: number; minor?: boolean } & Record<string, unknown>)[] }[],
   now: Date = new Date(),
 ): SparkPoint[] {
   const startDay = new Date(
@@ -41,6 +43,7 @@ export function dailyTightestSeries(
     if (day < startDay) continue;
     let min: number | undefined;
     for (const w of row.windows) {
+      if (w.minor) continue;
       const pct = w.remainingPct;
       if (typeof pct !== "number") continue;
       min = min === undefined ? pct : Math.min(min, pct);

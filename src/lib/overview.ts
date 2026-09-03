@@ -5,6 +5,7 @@ export function tightestWindow(s: SnapshotView | null | undefined): Window | nul
   if (!s) return null;
   let best: Window | null = null;
   for (const w of s.windows) {
+    if (w.minor) continue;
     const pct = w.remainingPct;
     if (typeof pct !== "number") continue;
     if (!best || (best.remainingPct as number) > pct) best = w;
@@ -18,6 +19,7 @@ export function nextResetWindow(windows: Window[]): Window | null {
   let best: Window | null = null;
   let bestMs = Infinity;
   for (const w of windows) {
+    if (w.minor) continue;
     const ms = w.resetAt ? Date.parse(w.resetAt) : Number.NaN;
     if (!Number.isFinite(ms) || ms <= now || ms >= bestMs) continue;
     bestMs = ms;
@@ -80,6 +82,7 @@ export function overviewKpis(accounts: AccountView[]): OverviewKpis {
     if (errored) kpis.errorCount += 1;
     const display = account.lastOkSnapshot ?? account.latestSnapshot;
     for (const w of display?.windows ?? []) {
+      if (w.minor) continue;
       const pct = w.remainingPct;
       if (!errored && typeof pct === "number" && pct < tightestPct) {
         tightestPct = pct;

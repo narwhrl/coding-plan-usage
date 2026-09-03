@@ -43,6 +43,11 @@ describe("tightestWindow", () => {
     expect(tightestWindow(snap([window(undefined)]))).toBeNull();
     expect(tightestWindow(null)).toBeNull();
   });
+
+  it("ignores minor lanes even when they are tighter", () => {
+    const major = window(55);
+    expect(tightestWindow(snap([major, { ...window(2), minor: true }]))).toBe(major);
+  });
 });
 
 describe("nextResetWindow", () => {
@@ -54,6 +59,12 @@ describe("nextResetWindow", () => {
     expect(nextResetWindow([later, soon, past])).toBe(soon);
     expect(nextResetWindow([past, window(50)])).toBeNull();
     expect(nextResetWindow([])).toBeNull();
+  });
+
+  it("ignores minor lanes even when they reset sooner", () => {
+    const major = window(50, new Date(Date.now() + 600_000).toISOString());
+    const minor = { ...window(50, new Date(Date.now() + 60_000).toISOString()), minor: true };
+    expect(nextResetWindow([minor, major])).toBe(major);
   });
 });
 
@@ -98,6 +109,20 @@ describe("overviewKpis", () => {
 
     expect(result.tightest?.window.remainingPct).toBe(25);
     expect(result.nextReset).toBeNull();
+  });
+
+  it("skips minor lanes for both the tightest and next-reset KPIs", () => {
+    const account = mkAccount({
+      latestSnapshot: snap([
+        { ...window(2, new Date(Date.now() + 60_000).toISOString()), minor: true },
+        window(25, new Date(Date.now() + 600_000).toISOString()),
+      ]),
+    });
+
+    const result = overviewKpis([account]);
+
+    expect(result.tightest?.window.remainingPct).toBe(25);
+    expect(result.nextReset?.window.remainingPct).toBe(25);
   });
 });
 
