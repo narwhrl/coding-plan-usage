@@ -39,6 +39,10 @@ function readStoredLane(): ProviderLane {
   return "plan";
 }
 
+function serverLane(): ProviderLane {
+  return "plan";
+}
+
 function subscribeOverviewLane(onChange: () => void) {
   const onStorage = (event: StorageEvent) => {
     if (event.key === LANE_KEY || event.key === null) onChange();
@@ -57,7 +61,7 @@ export default function OverviewPage() {
   const tTime = useTranslations("time");
   const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [error, setError] = useState(false);
-  const lane = useSyncExternalStore(subscribeOverviewLane, readStoredLane, () => "plan");
+  const lane = useSyncExternalStore(subscribeOverviewLane, readStoredLane, serverLane);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
 
   const changeLane = (next: ProviderLane) => {
