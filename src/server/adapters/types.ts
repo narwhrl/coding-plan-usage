@@ -41,12 +41,19 @@ export type AdapterContext = {
   onCredentialsRefreshed?: (credentials: Record<string, string>) => void;
 };
 
+export type ProviderBilling = "plan" | "api";
+export type DisplayCurrency = "CNY" | "USD";
+
 export type Adapter = {
   id: string;
   name: string;
   unit: string;
   fields: CredentialField[];
   baseUrlOptions?: { label: string; value: string }[];
+  /** 订阅配额 vs 预付费 API。默认 plan。 */
+  billing?: ProviderBilling;
+  /** 官方余额可能多币种时，账户设置里可选的展示币种。 */
+  displayCurrencies?: readonly DisplayCurrency[];
   fetchUsage: (ctx: AdapterContext) => Promise<AdapterResult>;
 };
 

@@ -50,7 +50,14 @@
     "attention": "Needs attention",
     "healthy": "Other accounts",
     "allAccounts": "All accounts",
-    "viewDetail": "View details"
+    "viewDetail": "View details",
+    "laneLabel": "Account type",
+    "lanePlan": "Plans",
+    "laneApi": "API",
+    "emptyPlan": "No plan accounts yet",
+    "emptyPlanHint": "Subscription providers (GLM / Claude / Cursor, …) show up here",
+    "emptyApi": "No API accounts yet",
+    "emptyApiHint": "Prepaid API providers (DeepSeek, …) show up here"
   },
   "window": {
     "5h": "5-hour quota",
@@ -102,6 +109,7 @@
     "interval": "Interval",
     "warnPct": "Warn threshold",
     "baseUrl": "API base URL",
+    "displayCurrency": "Display currency",
     "enabled": "Enabled",
     "credentials": "Credentials (leave empty to keep)",
     "noSnapshots": "A trend appears after two successful fetches",
@@ -159,6 +167,8 @@
       "warnPct": "Warn threshold",
       "overrideHint": "Leave empty to use the defaults from General.",
       "baseUrl": "API base URL",
+      "displayCurrency": "Display currency",
+      "displayCurrencyHint": "Official balance may include both CNY and USD. The card shows the selected one, and falls back if that currency is missing.",
       "save": "Save",
       "saving": "Saving…",
       "saved": "Account added",

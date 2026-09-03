@@ -1,4 +1,4 @@
-import type { Adapter } from "./types";
+import type { Adapter, ProviderBilling } from "./types";
 import { glmAdapter } from "./glm";
 import { deepseekAdapter } from "./deepseek";
 import { codexAdapter } from "./codex";
@@ -34,6 +34,13 @@ export function getBuiltinAdapter(id: string): Adapter | undefined {
  * builtin → registry 查找；custom → declarative spec 包装。
  * spec 非法时返回 undefined（调用方决定 404/400）。
  */
+/** 订阅配额 vs 预付费 API。自定义 REST 提供商按 API 计。 */
+export function adapterBilling(adapter: Adapter | undefined, providerKind?: string): ProviderBilling {
+  if (adapter?.billing === "api") return "api";
+  if (providerKind === "custom") return "api";
+  return "plan";
+}
+
 export function getAdapter(provider: Provider): Adapter | undefined {
   if (provider.kind === "builtin") return getBuiltinAdapter(provider.id);
   if (provider.kind !== "custom" || !provider.declarativeSpec) return undefined;

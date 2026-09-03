@@ -9,6 +9,7 @@ export const openrouterAdapter: Adapter = {
   id: "openrouter",
   name: "OpenRouter",
   unit: "usd",
+  billing: "api",
   fields: [{ key: "apiKey", label: "API Key (sk-or-...)", kind: "text", secret: true }],
   async fetchUsage(ctx): Promise<AdapterResult> {
     const apiKey = (ctx.credentials.apiKey ?? "").trim();

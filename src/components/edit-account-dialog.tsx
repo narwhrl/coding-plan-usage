@@ -22,19 +22,23 @@ import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import type { AccountView, CredentialFieldView } from "@/lib/types";
+import { DisplayCurrencyField } from "@/components/display-currency-field";
+import type { AccountView, CredentialFieldView, DisplayCurrency } from "@/lib/types";
+import { parseDisplayCurrency } from "@/lib/display-currency";
 import { fieldLabel, fieldPlaceholder } from "@/lib/format";
 
 /** 账户编辑弹窗：凭证留空即保持原值（后端不回传明文）。 */
 export function EditAccountDialog({
   account,
   fields,
+  displayCurrencies,
   open,
   onOpenChange,
   onSaved,
 }: {
   account: AccountView;
   fields: CredentialFieldView[];
+  displayCurrencies?: DisplayCurrency[] | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
@@ -46,6 +50,9 @@ export function EditAccountDialog({
   const [interval, setIntervalValue] = useState(account.config.intervalMinutes?.toString() ?? "");
   const [warnPct, setWarnPct] = useState(account.config.warnPct?.toString() ?? "");
   const [baseUrl, setBaseUrl] = useState(account.config.baseUrl ?? "");
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(
+    parseDisplayCurrency(account.config.displayCurrency) ?? "CNY",
+  );
   const [enabled, setEnabled] = useState(account.enabled);
   const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -60,6 +67,7 @@ export function EditAccountDialog({
           ...(interval.trim() ? { intervalMinutes: Number(interval) } : {}),
           ...(warnPct.trim() ? { warnPct: Number(warnPct) } : {}),
           ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
+          ...(displayCurrencies && displayCurrencies.length > 0 ? { displayCurrency } : {}),
         },
       };
       const filled = Object.fromEntries(
@@ -131,6 +139,14 @@ export function EditAccountDialog({
                 <FieldLabel htmlFor="edit-baseurl">{t("baseUrl")}</FieldLabel>
                 <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
               </Field>
+              {displayCurrencies && displayCurrencies.length > 0 ? (
+                <DisplayCurrencyField
+                  id="edit-currency"
+                  value={displayCurrency}
+                  currencies={displayCurrencies}
+                  onValueChange={setDisplayCurrency}
+                />
+              ) : null}
               <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
                 <Label htmlFor="edit-enabled">{t("enabled")}</Label>
                 <Switch id="edit-enabled" checked={enabled} onCheckedChange={setEnabled} />

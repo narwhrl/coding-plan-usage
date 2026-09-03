@@ -16,8 +16,9 @@ import {
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { DisplayCurrencyField } from "@/components/display-currency-field";
 import { ProviderMonogram } from "@/components/provider-monogram";
-import type { ProviderView } from "@/lib/types";
+import type { DisplayCurrency, ProviderView } from "@/lib/types";
 import { fieldLabel, fieldPlaceholder, regionName } from "@/lib/format";
 
 export function AccountAddForm({ providers, onSaved }: { providers: ProviderView[]; onSaved: () => void }) {
@@ -29,6 +30,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
   const [interval, setIntervalValue] = useState("");
   const [warnPct, setWarnPct] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("CNY");
   const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
             ...(interval.trim() ? { intervalMinutes: Number(interval) } : {}),
             ...(warnPct.trim() ? { warnPct: Number(warnPct) } : {}),
             ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
+            ...(provider.displayCurrencies?.length ? { displayCurrency } : {}),
           },
         }),
       });
@@ -64,6 +67,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
       setIntervalValue("");
       setWarnPct("");
       setBaseUrl("");
+      setDisplayCurrency("CNY");
       setCredentialValues({});
       onSaved();
     } catch (e) {
@@ -90,6 +94,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               setProviderId(value ?? "");
               setCredentialValues({});
               setBaseUrl("");
+              setDisplayCurrency("CNY");
               setSavedMessage(null);
             }}
           >
@@ -166,6 +171,15 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               </SelectPopup>
             </Select>
           </Field>
+        ) : null}
+
+        {provider?.displayCurrencies && provider.displayCurrencies.length > 0 ? (
+          <DisplayCurrencyField
+            id="add-currency"
+            value={displayCurrency}
+            currencies={provider.displayCurrencies}
+            onValueChange={setDisplayCurrency}
+          />
         ) : null}
 
         <Separator />

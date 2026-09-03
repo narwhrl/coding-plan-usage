@@ -20,6 +20,7 @@ function mkAccount(overrides: Partial<AccountView> = {}): AccountView {
     providerName: "Provider",
     providerKind: "builtin",
     providerUnit: "percent",
+    lane: "plan",
     label: "Account",
     enabled: true,
     config: {},

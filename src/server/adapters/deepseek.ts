@@ -41,6 +41,8 @@ export const deepseekAdapter: Adapter = {
   id: "deepseek",
   name: "DeepSeek API",
   unit: "usd",
+  billing: "api",
+  displayCurrencies: ["CNY", "USD"],
   fields: [{ key: "apiKey", label: "API Key", kind: "text", secret: true, placeholder: "sk-..." }],
   async fetchUsage(ctx): Promise<AdapterResult> {
     const apiKey = (ctx.credentials.apiKey ?? "").replace(/^Bearer\s+/i, "").trim();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Gauge, TriangleAlert } from "lucide-react";
@@ -20,9 +20,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AccountCard } from "@/components/account-card";
 import { PageHeader } from "@/components/page-header";
 import { StatStrip, StatStripItem } from "@/components/stat-strip";
-import type { AccountView } from "@/lib/types";
+import type { AccountView, ProviderLane } from "@/lib/types";
 import { overviewKpis, sortAccountsByUrgency } from "@/lib/overview";
+import { accountForDisplay } from "@/lib/display-currency";
 import { countdownText, windowName } from "@/lib/format";
+import { SegmentedToggle } from "@/components/segmented-toggle";
+
+const LANE_KEY = "cpu_overview_lane";
+const LANE_EVENT = "cpu-overview-lane";
+
+function readStoredLane(): ProviderLane {
+  try {
+    const stored = window.localStorage.getItem(LANE_KEY);
+    if (stored === "api" || stored === "plan") return stored;
+  } catch {
+    /* ignore */
+  }
+  return "plan";
+}
+
+function serverLane(): ProviderLane {
+  return "plan";
+}
+
+function subscribeOverviewLane(onChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === LANE_KEY || event.key === null) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(LANE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(LANE_EVENT, onChange);
+  };
+}
 
 export default function OverviewPage() {
   const t = useTranslations("overview");
@@ -30,7 +61,17 @@ export default function OverviewPage() {
   const tTime = useTranslations("time");
   const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [error, setError] = useState(false);
+  const lane = useSyncExternalStore(subscribeOverviewLane, readStoredLane, serverLane);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
+
+  const changeLane = (next: ProviderLane) => {
+    try {
+      window.localStorage.setItem(LANE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new Event(LANE_EVENT));
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -74,8 +115,9 @@ export default function OverviewPage() {
     );
   }
 
-  const kpis = overviewKpis(accounts);
-  const sorted = sortAccountsByUrgency(accounts);
+  const visible = accounts.filter((account) => (account.lane ?? "plan") === lane);
+  const kpis = overviewKpis(visible);
+  const sorted = sortAccountsByUrgency(visible);
   const needsAttention = (a: AccountView) =>
     a.enabled && (a.latestSnapshot?.status === "error" || a.warn);
   const urgent = sorted.filter(needsAttention);
@@ -83,9 +125,24 @@ export default function OverviewPage() {
   // 只有同时存在两组时才分节，否则一个标题下挂全部账户反而更啰嗦。
   const grouped = urgent.length > 0 && rest.length > 0;
 
+  const planCount = accounts.filter((a) => (a.lane ?? "plan") === "plan").length;
+  const apiCount = accounts.filter((a) => a.lane === "api").length;
+  const laneToggle =
+    accounts.length > 0 ? (
+      <SegmentedToggle
+        label={t("laneLabel")}
+        value={lane}
+        options={[
+          { value: "plan", label: `${t("lanePlan")} ${planCount}` },
+          { value: "api", label: `${t("laneApi")} ${apiCount}` },
+        ]}
+        onValueChange={changeLane}
+      />
+    ) : undefined;
+
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} />
+      <PageHeader title={t("title")} actions={laneToggle} />
 
       {error ? (
         <Alert variant="error">
@@ -103,6 +160,21 @@ export default function OverviewPage() {
               </EmptyMedia>
               <EmptyTitle>{t("empty")}</EmptyTitle>
               <EmptyDescription>{t("emptyHint")}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button render={<Link href="/settings" />}>{t("goSettings")}</Button>
+            </EmptyContent>
+          </Empty>
+        </Card>
+      ) : visible.length === 0 ? (
+        <Card>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Gauge />
+              </EmptyMedia>
+              <EmptyTitle>{lane === "api" ? t("emptyApi") : t("emptyPlan")}</EmptyTitle>
+              <EmptyDescription>{lane === "api" ? t("emptyApiHint") : t("emptyPlanHint")}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button render={<Link href="/settings" />}>{t("goSettings")}</Button>
@@ -214,7 +286,7 @@ function AccountSection({
       */}
       <div className="grid gap-4 sm:grid-cols-2">
         {accounts.map((account) => (
-          <AccountCard key={account.id} account={account} onRefreshed={onRefreshed} />
+          <AccountCard key={account.id} account={accountForDisplay(account)} onRefreshed={onRefreshed} />
         ))}
       </div>
     </section>

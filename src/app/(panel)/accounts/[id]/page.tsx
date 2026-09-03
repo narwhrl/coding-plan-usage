@@ -48,6 +48,7 @@ import {
   windowPrimaryText,
 } from "@/lib/format";
 import { heroWindow, nextResetWindow } from "@/lib/overview";
+import { accountForDisplay, historyForCurrency, parseDisplayCurrency } from "@/lib/display-currency";
 import { parseModelUsage } from "@/lib/model-usage";
 import { parseTokenUsage } from "@/lib/token-usage";
 
@@ -136,8 +137,10 @@ export default function AccountDetailPage() {
     );
   }
 
-  const display = account.lastOkSnapshot ?? account.latestSnapshot;
+  const shown = accountForDisplay(account);
+  const display = shown.lastOkSnapshot ?? shown.latestSnapshot;
   const windows = display?.windows ?? [];
+  const historyShown = historyForCurrency(history, parseDisplayCurrency(account.config.displayCurrency));
   const hero = heroWindow(display);
   const heroIsPct = hero?.remainingPct !== undefined;
   // raw 列形状：{ meta: 适配器 meta, responses: 调试切片 }（见 schema.ts 注释）
@@ -277,9 +280,9 @@ export default function AccountDetailPage() {
       {usage ? <UsageCard usage={usage} /> : null}
       {tokenUsage ? <TokenUsageCard usage={tokenUsage} /> : null}
 
-      <TrendChart history={history} warnPct={account.warnThreshold} />
+      <TrendChart history={historyShown} warnPct={account.warnThreshold} />
 
-      <SnapshotHistory history={history} warnPct={account.warnThreshold} />
+      <SnapshotHistory history={historyShown} warnPct={account.warnThreshold} />
 
       <p className="sr-only" aria-live="polite">
         {refreshing ? tCommon("loading") : ""}

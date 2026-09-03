@@ -26,10 +26,15 @@ export type SnapshotView = {
 /** 概览 7 日柱条的一个点：UTC 日期(YYYY-MM-DD) + 当日最紧 remainingPct。 */
 export type SparkPoint = { d: string; pct: number };
 
+export type ProviderLane = "plan" | "api";
+export type DisplayCurrency = "CNY" | "USD";
+
 export type AccountConfig = {
   intervalMinutes?: number;
   warnPct?: number;
   baseUrl?: string;
+  /** DeepSeek 等多币种余额：卡片/详情只展示选中的币种。 */
+  displayCurrency?: DisplayCurrency;
   /** 种子演示账户标记：手动刷新跳过真实采集（仅脚本写入，API schema 剥离该键）。 */
   demo?: boolean;
 };
@@ -40,6 +45,8 @@ export type AccountView = {
   providerName: string;
   providerKind: string;
   providerUnit: string;
+  /** 订阅配额 vs 预付费 API，概览分栏用。 */
+  lane: ProviderLane;
   label: string;
   enabled: boolean;
   config: AccountConfig;
@@ -69,6 +76,8 @@ export type ProviderView = {
   fields: CredentialFieldView[];
   baseUrlOptions: { label: string; value: string }[] | null;
   hasSpec: boolean;
+  lane: ProviderLane;
+  displayCurrencies: DisplayCurrency[] | null;
 };
 
 export type GeneralSettings = {
