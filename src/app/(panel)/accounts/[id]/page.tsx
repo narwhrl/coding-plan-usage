@@ -33,7 +33,7 @@ import { SnapshotHistory } from "@/components/snapshot-history";
 import { StatStrip, StatStripItem, StatTile } from "@/components/stat-strip";
 import { TrendChart } from "@/components/trend-chart";
 import { UsageCard } from "@/components/usage-card";
-import type { AccountView, HistorySnapshot } from "@/lib/types";
+import type { AccountView, HistorySnapshot, Window } from "@/lib/types";
 import {
   compactNumber,
   countdownText,
@@ -142,6 +142,8 @@ export default function AccountDetailPage() {
   const nextReset = nextResetWindow(windows);
   const balance = display?.balance;
   const hasBalanceWindow = windows.some((w) => w.kind === "balance");
+  const majorWindows = windows.filter((w) => !w.minor);
+  const modelLanes = windows.filter((w) => w.minor);
 
   return (
     <div className="space-y-6">
@@ -232,42 +234,13 @@ export default function AccountDetailPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {windows.length === 0 && !balance ? (
+          {majorWindows.length === 0 && !balance ? (
             <p className="py-6 text-center text-sm text-muted-foreground">{tDetail("windowsEmpty")}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {windows.map((w, index) => {
-                const name = windowName(w, t);
-                const amount = windowAmountText(w, unitName(w.unit, t));
-                return (
-                  <StatTile
-                    key={index}
-                    label={name}
-                    value={windowPctText(w, 1) ?? amount ?? "—"}
-                    valueClassName={quotaTextClassName(w.remainingPct, account.warnThreshold)}
-                    hint={
-                      [
-                        windowPctText(w) !== null ? amount : null,
-                        w.resetAt
-                          ? `${t("overview.windowReset")} ${shortDateTime(w.resetAt, locale)}`
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || undefined
-                    }
-                  >
-                    {w.remainingPct !== undefined ? (
-                      <QuotaBar
-                        pct={w.remainingPct}
-                        warnPct={account.warnThreshold}
-                        label={name}
-                        size="sm"
-                        className="mt-2"
-                      />
-                    ) : null}
-                  </StatTile>
-                );
-              })}
+              {majorWindows.map((w, index) => (
+                <WindowStatTile key={index} w={w} warnPct={account.warnThreshold} />
+              ))}
               {balance && !hasBalanceWindow ? (
                 <StatTile
                   label={tDetail("summaryBalance")}
@@ -278,6 +251,23 @@ export default function AccountDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {modelLanes.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle render={<h2 />} className="text-base">
+              {tDetail("modelLanes")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {modelLanes.map((w, index) => (
+                <WindowStatTile key={index} w={w} warnPct={account.warnThreshold} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {usage ? <UsageCard usage={usage} /> : null}
 
@@ -290,6 +280,33 @@ export default function AccountDetailPage() {
       </p>
 
     </div>
+  );
+}
+
+/** 窗口详情/模型额度卡片共用的额度 tile：百分比为主值，绝对量与重置时间进 hint。 */
+function WindowStatTile({ w, warnPct }: { w: Window; warnPct: number }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const name = windowName(w, t);
+  const amount = windowAmountText(w, unitName(w.unit, t));
+  return (
+    <StatTile
+      label={name}
+      value={windowPctText(w, 1) ?? amount ?? "—"}
+      valueClassName={quotaTextClassName(w.remainingPct, warnPct)}
+      hint={
+        [
+          windowPctText(w) !== null ? amount : null,
+          w.resetAt ? `${t("overview.windowReset")} ${shortDateTime(w.resetAt, locale)}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined
+      }
+    >
+      {w.remainingPct !== undefined ? (
+        <QuotaBar pct={w.remainingPct} warnPct={warnPct} label={name} size="sm" className="mt-2" />
+      ) : null}
+    </StatTile>
   );
 }
 

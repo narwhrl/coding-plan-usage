@@ -120,7 +120,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         {display && display.windows.length > 0 ? (
           <div className="space-y-3">
             {display.windows
-              .filter((w) => w !== hero)
+              .filter((w) => w !== hero && !w.minor)
               .map((w, index) => (
                 <WindowRow key={index} w={w} warnPct={account.warnThreshold} />
               ))}
