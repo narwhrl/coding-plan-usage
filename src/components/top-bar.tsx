@@ -7,7 +7,6 @@ import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Menu, Moon, RefreshCw, Sun } from "lucide-react";
 import {
   Sheet,
   SheetTrigger,
@@ -16,6 +15,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Languages,
+  LogOut,
+  Menu,
+  Monitor,
+  Moon,
+  RefreshCw,
+  Sun,
+} from "lucide-react";
+import {
   segmentedControlItemVariants,
   segmentedControlRootClassName,
 } from "@/lib/segmented-control";
@@ -23,16 +31,35 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [{ href: "/", key: "overview" }, { href: "/settings", key: "settings" }] as const;
 
-/** 顶栏：产品名 + 分段式导航（含当前页高亮）+ 语言/主题切换 + 全局刷新。 */
+const THEME_OPTIONS = [
+  { value: "light", key: "themeLight", Icon: Sun },
+  { value: "dark", key: "themeDark", Icon: Moon },
+  { value: "system", key: "themeSystem", Icon: Monitor },
+] as const;
+
+const THEME_NEXT = {
+  light: "dark",
+  dark: "system",
+  system: "light",
+} as const;
+
+
+/** 顶栏：产品名 + 分段式导航（含当前页高亮）+ 主题三选/语言/全局刷新。 */
 export function TopBar({ authEnabled }: { authEnabled: boolean }) {
   const t = useTranslations("nav");
   const tApp = useTranslations("app");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [refreshing, startRefresh] = useTransition();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hasToggled, setHasToggled] = useState(false);
+
+  // 未显式设置时（SSR/首帧）next-themes 的 theme 为 undefined，视作跟随系统。
+  const currentTheme =
+    theme && theme in THEME_NEXT ? (theme as keyof typeof THEME_NEXT) : "system";
+  const currentKey = THEME_OPTIONS.find((option) => option.value === currentTheme)!.key;
 
   // 账户详情页归属概览，所以用前缀匹配而不是等值。
   const isActive = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/accounts") : pathname.startsWith(href));
@@ -104,12 +131,28 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            aria-label={t("theme")}
+            aria-label={`${t("theme")} · ${t(currentKey)}`}
             data-testid="theme-switch"
+            onClick={() => {
+              setHasToggled(true);
+              setTheme(THEME_NEXT[currentTheme]);
+            }}
           >
-            <Sun className="hidden dark:block" />
-            <Moon className="block dark:hidden" />
+            <span className="relative flex size-4 items-center justify-center">
+              {THEME_OPTIONS.map(({ value, Icon }) => (
+                <Icon
+                  key={value}
+                  className={cn(
+                    "absolute size-4",
+                    hasToggled &&
+                      "transition-[opacity,scale,filter] duration-300 ease-[cubic-bezier(0.2,0,0,1)]",
+                    currentTheme === value
+                      ? "scale-100 opacity-100 blur-[0px]"
+                      : "scale-25 opacity-0 blur-[4px]",
+                  )}
+                />
+              ))}
+            </span>
           </Button>
           <Button
             variant="ghost"
@@ -117,11 +160,18 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
             onClick={switchLang}
             aria-label={t("language")}
             data-testid="lang-switch"
+            className="hidden sm:inline-flex"
           >
             <span className="text-xs font-semibold">{locale === "zh" ? "EN" : "中"}</span>
           </Button>
           {authEnabled ? (
-            <Button variant="ghost" size="icon-sm" onClick={logout} aria-label={t("logout")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={logout}
+              aria-label={t("logout")}
+              className="hidden sm:inline-flex"
+            >
               <LogOut />
             </Button>
           ) : null}
@@ -143,12 +193,41 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
                     href={item.href}
                     aria-current={isActive(item.href) ? "page" : undefined}
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+                    className="rounded-md px-3 py-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
                   >
                     {t(item.key)}
                   </Link>
                 ))}
               </nav>
+              <Separator className="mx-4 w-auto" />
+              <div className="flex flex-col gap-1 p-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => {
+                    switchLang();
+                    setMenuOpen(false);
+                  }}
+                >
+                  <Languages />
+                  {t("language")}
+                </Button>
+                {authEnabled ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start"
+                    onClick={() => {
+                      void logout();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <LogOut />
+                    {t("logout")}
+                  </Button>
+                ) : null}
+              </div>
             </SheetPopup>
           </Sheet>
         </div>
