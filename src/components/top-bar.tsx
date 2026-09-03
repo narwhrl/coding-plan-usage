@@ -23,10 +23,6 @@ import {
   RefreshCw,
   Sun,
 } from "lucide-react";
-import {
-  segmentedControlItemVariants,
-  segmentedControlRootClassName,
-} from "@/lib/segmented-control";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [{ href: "/", key: "overview" }, { href: "/settings", key: "settings" }] as const;
@@ -101,13 +97,21 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
           <span className="font-heading text-base font-semibold tracking-tight">{tApp("name")}</span>
         </Link>
 
-        <nav aria-label={t("menu")} className={cn(segmentedControlRootClassName, "hidden sm:flex")}>
+        {/* GitHub 式贴底线导航：指示条压在 header 的 border-b 上连成一条，选中处加粗一段。 */}
+        <nav aria-label={t("menu")} className="hidden self-stretch sm:flex">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
-              className={segmentedControlItemVariants({ size: "sm", state: "current" })}
+              className={cn(
+                "relative flex items-center px-3 text-sm font-medium text-muted-foreground",
+                "transition-[color] duration-150 ease-out hover:text-foreground",
+                "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground",
+                "after:opacity-0 after:transition-opacity after:duration-150 after:ease-out",
+                "aria-[current=page]:text-foreground aria-[current=page]:after:opacity-100",
+                "outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
             >
               {t(item.key)}
             </Link>
