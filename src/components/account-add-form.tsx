@@ -99,7 +99,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
               {providers.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <span className="flex items-center gap-2">
-                    <ProviderMonogram name={p.name} size="sm" />
+                    <ProviderMonogram name={p.name} providerId={p.id} size="sm" />
                     {p.name}
                   </span>
                 </SelectItem>

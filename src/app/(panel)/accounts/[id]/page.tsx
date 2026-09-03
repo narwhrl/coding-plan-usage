@@ -159,7 +159,7 @@ export default function AccountDetailPage() {
             </BreadcrumbList>
           </Breadcrumb>
         }
-        icon={<ProviderMonogram name={account.providerName} size="lg" />}
+        icon={<ProviderMonogram name={account.providerName} providerId={account.providerId} size="lg" />}
         title={account.providerName}
         description={
           <>
