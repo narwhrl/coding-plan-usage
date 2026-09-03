@@ -18,7 +18,7 @@
   },
   "login": {
     "title": "Access password",
-    "description": "This panel is protected by the ACCESS_PASSWORD env var",
+    "description": "Enter the password to continue",
     "password": "Password",
     "submit": "Enter",
     "wrong": "Wrong password",
@@ -26,7 +26,6 @@
   },
   "overview": {
     "title": "Accounts",
-    "subtitle": "Sorted by how tight the quota is, refreshed every 30s",
     "empty": "No accounts yet",
     "emptyHint": "Add your first provider account in settings",
     "goSettings": "Go to settings",
@@ -86,7 +85,7 @@
     "statusError": "Error",
     "raw": "Raw response",
     "edit": "Edit",
-    "refresh": "Fetch now",
+    "refresh": "Refresh now",
 
     "cancel": "Cancel",
     "save": "Save",
@@ -96,7 +95,7 @@
     "baseUrl": "API base URL",
     "enabled": "Enabled",
     "credentials": "Credentials (leave empty to keep)",
-    "noSnapshots": "Not enough snapshots yet — a trend needs at least two successful fetches",
+    "noSnapshots": "A trend appears after two successful fetches",
     "rangeSparse": "Too few snapshots in this range — try a longer one",
     "rangeSparseAction": "Show all snapshots",
     "notFound": "This account no longer exists",
@@ -129,13 +128,11 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage provider accounts, custom providers and global defaults",
     "tabAccounts": "Accounts",
     "tabCustom": "Custom providers",
     "tabGeneral": "General",
     "accounts": {
       "add": "Add account",
-      "addHint": "Credentials are stored AES-256-GCM encrypted; saving triggers the first fetch.",
       "provider": "Provider",
       "selectProvider": "Select a provider",
       "label": "Label",
@@ -147,16 +144,15 @@
       "baseUrl": "API base URL",
       "save": "Save",
       "saving": "Saving…",
-      "saved": "Saved; first fetch triggered",
+      "saved": "Account added",
       "list": "Existing accounts",
-      "listHint": "Open an account to see its trend and snapshot history.",
       "deleteConfirmTitle": "Delete account",
       "deleteConfirmBody": "This deletes the account and all of its snapshots.",
       "edit": "Edit",
       "delete": "Delete",
       "cancel": "Cancel",
       "empty": "No accounts",
-      "emptyHint": "Add one with the form on the left"
+      "emptyHint": "Use Add account to create one"
     },
     "custom": {
       "name": "Name",
@@ -193,25 +189,22 @@
       "deleteConfirmBody": "Accounts using this provider stop working. Make sure none are still in use.",
       "cancel": "Cancel",
       "empty": "No custom providers",
-      "emptyHint": "Purely declarative — no code required",
       "apiKeyForAccount": "API Key",
       "sectionBasics": "Basics",
       "sectionRequest": "Request",
       "sectionAuth": "Auth",
       "sectionMapping": "Field mapping",
       "sectionTest": "Verify",
-      "subtitle": "Turn any REST endpoint that returns JSON into a provider: give it a URL and field mappings. No scripts are executed."
+      "subtitle": "Add a provider from a REST endpoint that returns JSON."
     },
     "general": {
       "title": "General",
       "subtitle": "Accounts without their own settings fall back to these defaults.",
       "defaultInterval": "Default interval",
-      "defaultIntervalHint": "The scheduler ticks every 60s; only due accounts are fetched.",
       "warnPct": "Global warn threshold",
-      "warnPctHint": "Cards turn red once the remaining share drops below this.",
+      "warnPctHint": "Accounts are flagged when remaining drops below this.",
       "save": "Save",
-      "saved": "Saved",
-      "hint": "Per-account config overrides these defaults."
+      "saved": "Saved"
     }
   },
   "common": {

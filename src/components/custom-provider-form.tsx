@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -365,7 +365,6 @@ export function CustomProviderForm({ providers, onSaved }: { providers: Provider
                   <Plug />
                 </EmptyMedia>
                 <EmptyTitle className="text-base">{t("empty")}</EmptyTitle>
-                <EmptyDescription>{t("emptyHint")}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (

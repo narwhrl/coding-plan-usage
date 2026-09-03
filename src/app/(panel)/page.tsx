@@ -62,7 +62,7 @@ export default function OverviewPage() {
   if (accounts === null) {
     return (
       <div className="space-y-6" aria-busy="true">
-        <PageHeader title={t("title")} description={t("subtitle")} />
+        <PageHeader title={t("title")} />
         <Skeleton className="h-20 rounded-2xl" />
         {/* 列数与骨架数跟着真实网格走，数据到位时不会重排。 */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -85,7 +85,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} description={accounts.length > 0 ? t("subtitle") : undefined} />
+      <PageHeader title={t("title")} />
 
       {error ? (
         <Alert variant="error">
