@@ -18,7 +18,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - **Never** pull components from the registry again, unless the user explicitly asks to add a primitive.
 - Colors/radii/spacing come only from the tokens in `src/app/globals.css` (`:root`/`.dark` CSS variables → `@theme inline`); no hardcoded hex/oklch inside components.
 - Style new components after cal.com's restrained look: white background with gray scale, black primary CTA, 8/12/16 spacing rhythm; see `docs/design-system.md`.
-- Provider icons are always two-letter monogram text; do not add brand-icon dependencies.
+- Builtin provider icons are vendored monochrome SVGs keyed by adapter id (`src/lib/provider-icons.ts`); custom providers fall back to a two-letter monogram. Do not add brand-icon npm packages.
 
 ## Architecture rules
 

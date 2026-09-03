@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Sun,
 } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [{ href: "/", key: "overview" }, { href: "/settings", key: "settings" }] as const;
@@ -88,12 +89,7 @@ export function TopBar({ authEnabled }: { authEnabled: boolean }) {
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span
-            aria-hidden="true"
-            className="flex size-7 items-center justify-center rounded-md bg-primary font-heading text-sm font-semibold text-primary-foreground"
-          >
-            C
-          </span>
+          <BrandMark size="sm" />
           <span className="font-heading text-base font-semibold tracking-tight">{tApp("name")}</span>
         </Link>
 

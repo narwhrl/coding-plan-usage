@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { BrandMark } from "@/components/brand-mark";
 
 export default function LoginPage() {
   const t = useTranslations("login");
@@ -42,12 +43,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span
-          aria-hidden="true"
-          className="flex size-10 items-center justify-center rounded-xl bg-primary font-heading text-lg font-semibold text-primary-foreground"
-        >
-          C
-        </span>
+        <BrandMark size="md" />
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="max-w-xs text-sm text-muted-foreground">{t("description")}</p>

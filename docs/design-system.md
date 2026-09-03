@@ -69,7 +69,8 @@
 | `PageHeader` | 页头：eyebrow（面包屑）/ icon / 标题 / 描述 / 右侧动作。标题即页面唯一 `h1` |
 | `StatStrip` + `StatStripItem` | 顶部指标条：一张卡内等宽指标，靠分隔线划分；条目 ≤ 4 |
 | `StatTile` | 卡内指标格：带边框的小方块，可在数值下塞进 `QuotaBar` |
-| `ProviderMonogram` | 提供商标识，两字母 monogram，`sm`/`md`/`lg`；`aria-hidden` |
+| `ProviderMonogram` | 提供商标识：内置家走 vendored SVG，自定义回退两字母 monogram，`sm`/`md`/`lg`；`aria-hidden` |
+| `BrandMark` | 站点标志：圆角方底 + 三根递减额度条，填色走 `primary` 令牌 |
 | `QuotaBar` / `quotaTextClassName` | 额度条与额度文本，同一套分级 |
 | `AccountStatusBadges` | 账户状态徽标（失败 / 余量偏低 / 已停用 / 正常） |
 | `ChartTooltipContent` | Recharts tooltip 的统一外观 |
@@ -138,5 +139,6 @@
 
 1. 新建 `src/server/adapters/<id>.ts`，实现 `Adapter` 接口（`src/server/adapters/types.ts`）。
 2. 在 `src/server/adapters/registry.ts` 的 `BUILTIN_ADAPTERS` 数组追加（顺序即 sortOrder）。
-3. `src/server/bootstrap.ts` 启动幂等 upsert 自动落 providers 行，无需手写 SQL。
-4. 若为通用 REST JSON 端点，优先让用户走 declarative spec（`src/server/adapters/declarative.ts`），不写代码。
+3. 在 `src/lib/provider-icons.ts` 追加同 id 的单色 SVG path（currentColor，不写品牌 hex）。缺图标会回退 monogram。
+4. `src/server/bootstrap.ts` 启动幂等 upsert 自动落 providers 行，无需手写 SQL。
+5. 若为通用 REST JSON 端点，优先让用户走 declarative spec（`src/server/adapters/declarative.ts`），不写代码。

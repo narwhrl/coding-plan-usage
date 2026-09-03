@@ -127,7 +127,7 @@ export default function SettingsPage() {
                 <ul className="divide-y divide-border">
                   {accounts.map((account) => (
                     <li key={account.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                      <ProviderMonogram name={account.providerName} size="sm" />
+                      <ProviderMonogram name={account.providerName} providerId={account.providerId} size="sm" />
                       <div className="min-w-0 flex-1">
                         <h3 className="truncate text-sm font-medium">
                           <Link

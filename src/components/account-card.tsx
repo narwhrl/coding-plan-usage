@@ -57,9 +57,9 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
       data-testid="account-card"
       data-account-error={isError ? "true" : undefined}
     >
-      {/* CardHeader 默认是两行 grid，这里显式 flex 才能把 monogram/名称/刷新排成一行。 */}
+      {/* CardHeader 默认是两行 grid，这里显式 flex 才能把图标/名称/刷新排成一行。 */}
       <CardHeader className="flex flex-row items-center gap-3 pb-4">
-        <ProviderMonogram name={account.providerName} />
+        <ProviderMonogram name={account.providerName} providerId={account.providerId} />
         <div className="min-w-0 flex-1">
           <h3 className="font-medium">
             {/* inline-flex 而不是 flex：否则链接撑满整行，焦点环会框住整条头部而不是账户名。 */}
