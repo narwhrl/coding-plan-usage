@@ -43,7 +43,7 @@ const insertProvider = db.prepare(
 insertProvider.run("claude", "Claude", "percent", 1, iso(nowMs));
 insertProvider.run("glm", "GLM Coding Plan", "tokens", 2, iso(nowMs));
 insertProvider.run("cursor", "Cursor", "usd", 3, iso(nowMs));
-insertProvider.run("deepseek", "DeepSeek", "usd", 4, iso(nowMs));
+insertProvider.run("deepseek", "DeepSeek API", "usd", 4, iso(nowMs));
 
 const insertAccount = db.prepare(
   "INSERT INTO accounts (id, provider_id, label, credentials_cipher, config, enabled, next_fetch_at, sort_order, created_at) VALUES (?, ?, ?, 'v1:seed', '{\"demo\":true}', ?, ?, ?, ?)",
@@ -195,16 +195,27 @@ addAccount("demo-cursor", "cursor", "备用额度", true, 3);
   insertSnap("demo-cursor", iso(nowMs), "error", "seed error", null, null);
 }
 
-// ── demo-deepseek：停用，一条 ok 30% ──
+// ── demo-deepseek：停用，官方预付费余额（无 coding-plan 百分比）──
 addAccount("demo-deepseek", "deepseek", "停用示例", false, 4);
-insertSnap(
-  "demo-deepseek",
-  iso(nowMs - DAY),
-  "ok",
-  null,
-  JSON.stringify([{ kind: "balance", unit: "usd", used: 7, total: 10, remaining: 3, remainingPct: 30 }]),
-  null,
-);
+{
+  const amounts = [18.2, 16.8, 15.1, 14.0, 13.3, 12.9, 12.4];
+  for (const [i, ms] of dailyTimes().entries()) {
+    const remaining = amounts[i];
+    insertSnap(
+      "demo-deepseek",
+      iso(ms),
+      "ok",
+      null,
+      JSON.stringify([
+        { kind: "balance", unit: "cny", remaining },
+        { kind: "granted", unit: "cny", remaining: 0 },
+        { kind: "topped_up", unit: "cny", remaining },
+      ]),
+      JSON.stringify({ amount: remaining, currency: "CNY" }),
+      JSON.stringify({ meta: { isAvailable: true }, responses: null }),
+    );
+  }
+}
 });
 seed();
 

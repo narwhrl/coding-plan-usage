@@ -44,8 +44,9 @@ import {
   windowAmountText,
   windowName,
   windowPctText,
+  windowPrimaryText,
 } from "@/lib/format";
-import { nextResetWindow, tightestWindow } from "@/lib/overview";
+import { heroWindow, nextResetWindow } from "@/lib/overview";
 import { parseModelUsage } from "@/lib/model-usage";
 
 export default function AccountDetailPage() {
@@ -135,7 +136,8 @@ export default function AccountDetailPage() {
 
   const display = account.lastOkSnapshot ?? account.latestSnapshot;
   const windows = display?.windows ?? [];
-  const hero = tightestWindow(display);
+  const hero = heroWindow(display);
+  const heroIsPct = hero?.remainingPct !== undefined;
   // raw 列形状：{ meta: 适配器 meta, responses: 调试切片 }（见 schema.ts 注释）
   const raw = display?.meta as { meta?: { modelUsage?: unknown } } | null | undefined;
   const usage = parseModelUsage(raw?.meta?.modelUsage);
@@ -193,8 +195,8 @@ export default function AccountDetailPage() {
 
       <StatStrip>
         <StatStripItem
-          label={tDetail("summaryTightest")}
-          value={hero ? (windowPctText(hero) ?? "—") : "—"}
+          label={hero && !heroIsPct ? tDetail("summaryBalance") : tDetail("summaryTightest")}
+          value={hero ? (windowPrimaryText(hero, t) ?? "—") : "—"}
           tone={quotaTone(hero?.remainingPct, account.warnThreshold) === "critical" ? "critical" : "default"}
           hint={hero ? windowName(hero, t) : undefined}
         />

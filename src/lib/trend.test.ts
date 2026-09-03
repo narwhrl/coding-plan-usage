@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTrendSeries } from "./trend";
+import { buildTrendSeries, trendValueMode } from "./trend";
 import type { HistorySnapshot } from "./types";
 
 const HOUR = 3_600_000;
@@ -46,9 +46,19 @@ describe("buildTrendSeries", () => {
     expect(buildTrendSeries(history, Number.POSITIVE_INFINITY, label, name).data).toHaveLength(2);
   });
 
-  it("maps a missing percentage to null so connectNulls can bridge it", () => {
+  it("falls back to remaining amount when a window has no percentage", () => {
     const { data } = buildTrendSeries(
-      [snap(1, HOUR, [{ kind: "credits", unit: "credits", remaining: 5 }])],
+      [snap(1, HOUR, [{ kind: "balance", unit: "cny", remaining: 12.4 }])],
+      Number.POSITIVE_INFINITY,
+      label,
+      name,
+    );
+    expect(data[0].balance).toBe(12.4);
+  });
+
+  it("maps a window with neither percentage nor remaining to null", () => {
+    const { data } = buildTrendSeries(
+      [snap(1, HOUR, [{ kind: "credits", unit: "credits" }])],
       Number.POSITIVE_INFINITY,
       label,
       name,
@@ -61,5 +71,17 @@ describe("buildTrendSeries", () => {
       data: [],
       series: [],
     });
+  });
+});
+
+describe("trendValueMode", () => {
+  it("uses percent when any window has remainingPct, otherwise amount", () => {
+    expect(
+      trendValueMode([snap(1, HOUR, [{ kind: "5h", unit: "percent", remainingPct: 40 }])]),
+    ).toBe("percent");
+    expect(trendValueMode([snap(1, HOUR, [{ kind: "balance", unit: "cny", remaining: 8 }])])).toBe(
+      "amount",
+    );
+    expect(trendValueMode(null)).toBe("amount");
   });
 });

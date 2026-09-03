@@ -9,6 +9,7 @@ import {
   windowAmountText,
   windowName,
   windowPctText,
+  windowPrimaryText,
   type Translate,
 } from "./format";
 import type { Window } from "./types";
@@ -45,6 +46,16 @@ describe("windowPctText", () => {
     expect(windowPctText(win({ remainingPct: 8.04 }))).toBe("8%");
     expect(windowPctText(win({ remainingPct: 8.04 }), 1)).toBe("8.0%");
     expect(windowPctText(win())).toBeNull();
+  });
+});
+
+describe("windowPrimaryText", () => {
+  const t = makeT(["unit.usd", "unit.cny"]);
+
+  it("prefers a remaining percentage, then a prepaid remaining amount", () => {
+    expect(windowPrimaryText(win({ remainingPct: 40, remaining: 8 }), t)).toBe("40%");
+    expect(windowPrimaryText(win({ remaining: 12.4, unit: "cny" }), t)).toBe("12.4 unit.cny");
+    expect(windowPrimaryText(win(), t)).toBeNull();
   });
 });
 

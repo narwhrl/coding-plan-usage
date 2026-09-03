@@ -91,7 +91,7 @@ export async function GET(): Promise<NextResponse> {
       createdAt: account.createdAt,
       latestSnapshot: latest ? serializeSnapshot(latest) : null,
       lastOkSnapshot: lastOk ? serializeSnapshot(lastOk) : null,
-      warn: warnWindows.length > 0,
+      warn: warnWindows.length > 0 || adapterMeta(lastOk?.raw ?? null)?.isAvailable === false,
       warnThreshold,
       spark: dailyTightestSeries(
         (sparkByAccount.get(account.id) ?? []).map((r) => ({
@@ -135,6 +135,17 @@ function safeParseMeta(text: string): unknown {
   } catch {
     return null;
   }
+}
+
+/** raw 列形状：{ meta: 适配器 meta, responses }。isAvailable===false 表示官方余额不足以继续调 API。 */
+function adapterMeta(raw: string | null): Record<string, unknown> | null {
+  if (!raw) return null;
+  const parsed = safeParseMeta(raw);
+  if (!parsed || typeof parsed !== "object") return null;
+  const meta = (parsed as { meta?: unknown }).meta;
+  return meta && typeof meta === "object" && !Array.isArray(meta)
+    ? (meta as Record<string, unknown>)
+    : null;
 }
 
 const CreateAccountSchema = z.object({

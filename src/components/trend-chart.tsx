@@ -17,8 +17,8 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { SegmentedToggle } from "@/components/segmented-toggle";
-import { shortDateTime, shortTime, windowName } from "@/lib/format";
-import { buildTrendSeries } from "@/lib/trend";
+import { compactNumber, shortDateTime, shortTime, windowName } from "@/lib/format";
+import { buildTrendSeries, trendValueMode } from "@/lib/trend";
 import type { HistorySnapshot } from "@/lib/types";
 
 const RANGES = [
@@ -29,7 +29,7 @@ const RANGES = [
 
 type RangeValue = (typeof RANGES)[number]["value"];
 
-/** 每窗口一条 remainingPct 折线；系列名取本地化窗口名，颜色循环 chart-1..5。 */
+/** 每窗口一条折线（配额 remainingPct 或预付费 remaining）；系列名取本地化窗口名。 */
 export function TrendChart({
   history,
   warnPct,
@@ -56,6 +56,8 @@ export function TrendChart({
       ),
     [history, range, locale, t],
   );
+  const valueMode = useMemo(() => trendValueMode(history), [history]);
+  const isPercent = valueMode === "percent";
 
   return (
     <Card>
@@ -105,24 +107,29 @@ export function TrendChart({
                     minTickGap={48}
                   />
                   <YAxis
-                    width={36}
-                    domain={[0, 100]}
-                    ticks={[0, 25, 50, 75, 100]}
-                    tickFormatter={(v: number) => `${v}%`}
+                    width={isPercent ? 36 : 48}
+                    domain={isPercent ? [0, 100] : ["auto", "auto"]}
+                    ticks={isPercent ? [0, 25, 50, 75, 100] : undefined}
+                    tickFormatter={(v: number) => (isPercent ? `${v}%` : compactNumber(v))}
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                   />
-                  <ReferenceLine
-                    y={warnPct}
-                    stroke="var(--destructive)"
-                    strokeDasharray="4 4"
-                    strokeOpacity={0.56}
-                  />
+                  {isPercent ? (
+                    <ReferenceLine
+                      y={warnPct}
+                      stroke="var(--destructive)"
+                      strokeDasharray="4 4"
+                      strokeOpacity={0.56}
+                    />
+                  ) : null}
                   <Tooltip
                     cursor={{ stroke: "var(--border)" }}
                     content={(props) => (
-                      <ChartTooltipContent {...props} formatValue={(v) => `${v.toFixed(0)}%`} />
+                      <ChartTooltipContent
+                        {...props}
+                        formatValue={(v) => (isPercent ? `${v.toFixed(0)}%` : compactNumber(v))}
+                      />
                     )}
                   />
                   {series.map((name, index) => (

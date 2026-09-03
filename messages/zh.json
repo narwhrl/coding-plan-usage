@@ -59,6 +59,8 @@
     "credits": "额度",
     "requests": "请求数",
     "balance": "余额",
+    "granted": "赠金",
+    "topped_up": "充值余额",
     "session": "会话",
     "daily": "每日",
     "billing": "账期"
@@ -68,6 +70,7 @@
     "credits": "credits",
     "requests": "次",
     "usd": "USD",
+    "cny": "CNY",
     "percent": "%"
   },
   "detail": {

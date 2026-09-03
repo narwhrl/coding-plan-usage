@@ -59,6 +59,8 @@
     "credits": "Credits",
     "requests": "Requests",
     "balance": "Balance",
+    "granted": "Granted",
+    "topped_up": "Topped up",
     "session": "Session",
     "daily": "Daily",
     "billing": "Billing period"
@@ -68,6 +70,7 @@
     "credits": "credits",
     "requests": "reqs",
     "usd": "USD",
+    "cny": "CNY",
     "percent": "%"
   },
   "detail": {

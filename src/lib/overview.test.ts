@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
-import { nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
+import { heroWindow, nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
   return {
@@ -47,6 +47,22 @@ describe("tightestWindow", () => {
   it("ignores minor lanes even when they are tighter", () => {
     const major = window(55);
     expect(tightestWindow(snap([major, { ...window(2), minor: true }]))).toBe(major);
+  });
+});
+
+describe("heroWindow", () => {
+  it("prefers the tightest percentage window, then a prepaid remaining amount", () => {
+    expect(heroWindow(snap([window(55), window(12)]))?.remainingPct).toBe(12);
+    expect(
+      heroWindow(
+        snap([
+          { kind: "granted", unit: "cny", remaining: 1, minor: true },
+          { kind: "balance", unit: "cny", remaining: 12.4 },
+        ]),
+      ),
+    ).toEqual({ kind: "balance", unit: "cny", remaining: 12.4 });
+    expect(heroWindow(snap([{ kind: "granted", unit: "cny", remaining: 1, minor: true }]))).toBeNull();
+    expect(heroWindow(null)).toBeNull();
   });
 });
 
