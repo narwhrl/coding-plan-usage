@@ -112,7 +112,6 @@ export function declarativeAdapter(name: string, spec: DeclarativeSpec): Adapter
         windows: [
           {
             kind: "credits",
-            label: name,
             unit: spec.unit,
             ...(usedDiv !== undefined ? { used: usedDiv } : {}),
             ...(totalDiv !== undefined ? { total: totalDiv } : {}),

@@ -122,13 +122,126 @@ export function shortTime(iso: string | null | undefined, locale?: string): stri
 }
 
 /**
- * 窗口显示名：优先适配器给的 label，其次 window.<kind> 词条，最后裸 kind。
+ * 适配器曾写入的英文同义 label → window.<kind>。
+ * 历史快照仍带着 Weekly quota / Token usage (weekly) 这类名字，
+ * 显示层必须映射，否则中文界面会停在英文，各家用词也对不齐。
+ */
+const WINDOW_LABEL_ALIASES: Record<string, string> = {
+  "weekly quota": "window.weekly",
+  "weekly usage": "window.weekly",
+  "weekly": "window.weekly",
+  "token usage (weekly)": "window.weekly",
+  "token usage(weekly)": "window.weekly",
+  "weekly (7d)": "window.weekly",
+  "secondary (weekly)": "window.weekly",
+  "7-day": "window.weekly",
+  "7d": "window.weekly",
+  "5-hour session": "window.5h",
+  "5-hour window": "window.5h",
+  "5-hour quota": "window.5h",
+  "5 hour quota": "window.5h",
+  "token usage (5h)": "window.5h",
+  "token usage (5 hour)": "window.5h",
+  "token usage(5 hour)": "window.5h",
+  "session (5h)": "window.5h",
+  "primary (5h)": "window.5h",
+  "5h interval": "window.5h",
+  "5h": "window.5h",
+  "plan usage": "window.monthly",
+  "overall usage": "window.monthly",
+  "team pooled": "window.monthly",
+  "monthly": "window.monthly",
+  "monthly quota": "window.monthly",
+  "mcp usage (monthly)": "window.mcp",
+  "mcp monthly usage": "window.mcp",
+  "mcp usage(1 month)": "window.mcp",
+  "mcp monthly": "window.mcp",
+  credits: "window.credits",
+  "credits (lifetime)": "window.lifetime",
+  "lifetime credits": "window.lifetime",
+  balance: "window.balance",
+  granted: "window.granted",
+  "topped up": "window.topped_up",
+  "premium requests": "window.premium",
+  chat: "window.chat",
+};
+
+/** 同 kind 多条时 label 才是区分信息（模型名），不能被 kind 词条盖掉。 */
+const DISTINCTIVE_LABEL_KINDS = new Set(["daily"]);
+
+const CURRENCY_CODE = /^[A-Za-z]{3}$/;
+const LABEL_CURRENCY_SUFFIX = /^(.*?)\s*\(([a-z]{3})\)\s*$/i;
+
+function normalizeWindowLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function aliasForLabel(label: string): string | undefined {
+  const normalized = normalizeWindowLabel(label);
+  return WINDOW_LABEL_ALIASES[normalized] ?? WINDOW_LABEL_ALIASES[normalized.replace(/\s*\([a-z0-9]{3,4}\)\s*$/i, "").trim()];
+}
+
+function withCurrency(name: string, currency: string, t: Translate): string {
+  return t.has?.("window.withCurrency") ? t("window.withCurrency", { name, currency }) : `${name} (${currency})`;
+}
+
+/**
+ * 窗口显示名：规范 kind 走 window.<kind>；英文同义 label 映射到同一词条；
+ * 只有模型名这类无法用 kind 表达的 label 才原样显示。
  * 自定义提供商的 kind 不在词条表里，所以必须走 t.has 判断，不能直接 t()。
  */
 export function windowName(w: Pick<Window, "kind" | "label">, t: Translate): string {
-  if (w.label) return w.label;
-  const key = `window.${w.kind}`;
-  return t.has?.(key) ? t(key) : w.kind;
+  const kindKey = `window.${w.kind}`;
+  const hasKind = Boolean(t.has?.(kindKey));
+
+  if (w.label) {
+    const currencyMatch = LABEL_CURRENCY_SUFFIX.exec(w.label.trim());
+    if (currencyMatch) {
+      const aliased = aliasForLabel(currencyMatch[1]);
+      if (aliased && t.has?.(aliased)) return withCurrency(t(aliased), currencyMatch[2].toUpperCase(), t);
+    }
+    const aliased = aliasForLabel(w.label);
+    if (aliased && t.has?.(aliased)) return t(aliased);
+    if (CURRENCY_CODE.test(w.label.trim()) && hasKind) {
+      return withCurrency(t(kindKey), w.label.trim().toUpperCase(), t);
+    }
+    if (DISTINCTIVE_LABEL_KINDS.has(w.kind)) return w.label;
+  }
+
+  if (hasKind) return t(kindKey);
+  return w.label || w.kind;
+}
+
+/** 凭证字段名：fields.<providerId>.<key>，否则 fields.<key>，再回退适配器原文。 */
+export function fieldLabel(providerId: string, field: { key: string; label: string }, t: Translate): string {
+  const specific = `fields.${providerId}.${field.key}`;
+  if (t.has?.(specific)) return t(specific);
+  const generic = `fields.${field.key}`;
+  return t.has?.(generic) ? t(generic) : field.label;
+}
+
+/** 凭证占位符：fields.<providerId>.<key>Placeholder，否则适配器原文。 */
+export function fieldPlaceholder(
+  providerId: string,
+  field: { key: string; placeholder?: string },
+  t: Translate,
+): string | undefined {
+  const key = `fields.${providerId}.${field.key}Placeholder`;
+  if (t.has?.(key)) return t(key);
+  return field.placeholder;
+}
+
+const REGION_BY_URL: Record<string, string> = {
+  "https://api.z.ai": "region.zai",
+  "https://open.bigmodel.cn": "region.bigmodel",
+  "https://api.minimax.io": "region.minimaxGlobal",
+  "https://api.minimaxi.com": "region.minimaxChina",
+};
+
+/** 双区 Base URL 选项：按 URL 取词条，未知地址回退适配器原文。 */
+export function regionName(option: { label: string; value: string }, t: Translate): string {
+  const key = REGION_BY_URL[option.value];
+  return key && t.has?.(key) ? t(key) : option.label;
 }
 
 /** 单位显示名：unit.<unit> 词条，缺失回退裸值。 */

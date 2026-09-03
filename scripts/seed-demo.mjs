@@ -44,6 +44,9 @@ insertProvider.run("claude", "Claude", "percent", 1, iso(nowMs));
 insertProvider.run("glm", "GLM Coding Plan", "tokens", 2, iso(nowMs));
 insertProvider.run("cursor", "Cursor", "usd", 3, iso(nowMs));
 insertProvider.run("deepseek", "DeepSeek API", "usd", 4, iso(nowMs));
+insertProvider.run("kimi", "Kimi Coding", "percent", 6, iso(nowMs));
+insertProvider.run("minimax", "MiniMax Coding Plan", "percent", 7, iso(nowMs));
+insertProvider.run("copilot", "GitHub Copilot", "requests", 9, iso(nowMs));
 
 const insertAccount = db.prepare(
   "INSERT INTO accounts (id, provider_id, label, credentials_cipher, config, enabled, next_fetch_at, sort_order, created_at) VALUES (?, ?, ?, 'v1:seed', '{\"demo\":true}', ?, ?, ?, ?)",
@@ -93,8 +96,8 @@ const claudePct = (idx) => Math.round((60 - (52 * idx) / 27) * 10) / 10; // idx 
       "ok",
       null,
       JSON.stringify([
-        { kind: "5h", unit: "percent", remainingPct: claudePct(idx), resetAt: iso(ms + 5 * HOUR) },
-        { kind: "weekly", unit: "percent", remainingPct: 45, resetAt: iso(nowMs + 7 * DAY) },
+        { kind: "5h", label: "Session (5h)", unit: "percent", remainingPct: claudePct(idx), resetAt: iso(ms + 5 * HOUR) },
+        { kind: "weekly", label: "Weekly (7d)", unit: "percent", remainingPct: 45, resetAt: iso(nowMs + 7 * DAY) },
       ]),
       JSON.stringify({ amount: 12.34, currency: "USD" }),
     );
@@ -106,8 +109,8 @@ const claudePct = (idx) => Math.round((60 - (52 * idx) / 27) * 10) / 10; // idx 
     "ok",
     null,
     JSON.stringify([
-      { kind: "5h", unit: "percent", remainingPct: 8, resetAt: iso(nowMs + 3 * HOUR) },
-      { kind: "weekly", unit: "percent", remainingPct: 45, resetAt: iso(nowMs + 7 * DAY) },
+      { kind: "5h", label: "Session (5h)", unit: "percent", remainingPct: 8, resetAt: iso(nowMs + 3 * HOUR) },
+      { kind: "weekly", label: "Weekly (7d)", unit: "percent", remainingPct: 45, resetAt: iso(nowMs + 7 * DAY) },
     ]),
     JSON.stringify({ amount: 12.34, currency: "USD" }),
   );
@@ -166,8 +169,9 @@ addAccount("demo-glm", "glm", "备用", true, 2);
       "ok",
       null,
       JSON.stringify([
-        { kind: "5h", unit: "percent", remainingPct: 70, resetAt: iso(ms + 5 * HOUR) },
-        { kind: "weekly", unit: "percent", remainingPct: 72, resetAt: iso(nowMs + 2 * DAY) },
+        { kind: "5h", label: "Token usage (5h)", unit: "percent", remainingPct: 70, resetAt: iso(ms + 5 * HOUR) },
+        { kind: "weekly", label: "Token usage (weekly)", unit: "percent", remainingPct: 72, resetAt: iso(nowMs + 2 * DAY) },
+        { kind: "mcp", label: "MCP usage (monthly)", unit: "requests", used: 250, total: 1000, remainingPct: 75 },
       ]),
       null,
       isLatest ? JSON.stringify({ meta: { modelUsage: modelUsage() }, responses: null }) : null,
@@ -187,7 +191,7 @@ addAccount("demo-cursor", "cursor", "备用额度", true, 3);
       "ok",
       null,
       JSON.stringify([
-        { kind: "balance", unit: "usd", used: 20 - remaining, total: 20, remaining, remainingPct: pcts[i], resetAt: iso(nowMs + HOUR) },
+        { kind: "monthly", label: "Plan usage", unit: "usd", used: 20 - remaining, total: 20, remaining, remainingPct: pcts[i], resetAt: iso(nowMs + HOUR) },
       ]),
       null,
     );
@@ -216,6 +220,58 @@ addAccount("demo-deepseek", "deepseek", "停用示例", false, 4);
     );
   }
 }
+
+// ── demo-kimi：旧英文 Weekly quota / 5-hour session，用于验证同义 label 映射 ──
+addAccount("demo-kimi", "kimi", "主力", true, 5);
+insertSnap(
+  "demo-kimi",
+  iso(nowMs),
+  "ok",
+  null,
+  JSON.stringify([
+    { kind: "weekly", label: "Weekly quota", unit: "percent", remainingPct: 62, resetAt: iso(nowMs + 4 * DAY) },
+    { kind: "5h", label: "5-hour session", unit: "percent", remainingPct: 28, resetAt: iso(nowMs + 2 * HOUR) },
+  ]),
+  null,
+);
+
+// ── demo-minimax：5h/weekly 旧英文 + 模型次要车道（模型名保留）──
+addAccount("demo-minimax", "minimax", "视频", true, 6);
+insertSnap(
+  "demo-minimax",
+  iso(nowMs),
+  "ok",
+  null,
+  JSON.stringify([
+    { kind: "5h", label: "5h interval", unit: "percent", remainingPct: 41, resetAt: iso(nowMs + 4 * HOUR) },
+    { kind: "weekly", label: "Weekly", unit: "percent", remainingPct: 94, resetAt: iso(nowMs + 5 * DAY) },
+    {
+      kind: "daily",
+      label: "Hailuo-2.3",
+      unit: "requests",
+      remainingPct: 33,
+      total: 30,
+      remaining: 10,
+      resetAt: iso(nowMs + 4 * HOUR),
+      minor: true,
+    },
+  ]),
+  null,
+);
+
+// ── demo-copilot：旧 kind=requests + Premium/Chat label ──
+addAccount("demo-copilot", "copilot", "工作", true, 7);
+insertSnap(
+  "demo-copilot",
+  iso(nowMs),
+  "ok",
+  null,
+  JSON.stringify([
+    { kind: "requests", label: "Premium requests", unit: "requests", remainingPct: 18, total: 300, remaining: 54, resetAt: iso(nowMs + 12 * DAY) },
+    { kind: "requests", label: "Chat", unit: "requests", remainingPct: 71, total: 500, remaining: 355, resetAt: iso(nowMs + 12 * DAY) },
+  ]),
+  null,
+);
 });
 seed();
 

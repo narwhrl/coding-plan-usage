@@ -18,7 +18,7 @@ function centsToUsd(value: number | null): number | null {
   return Math.round(value) / 100;
 }
 
-function windowFromMoney(source: Moneyish, kind: string, label: string, resetAt: string | null) {
+function windowFromMoney(source: Moneyish, kind: string, resetAt: string | null) {
   const used = numberOrNull(source?.used);
   const limit = numberOrNull(source?.limit);
   const remaining = numberOrNull(source?.remaining);
@@ -34,7 +34,6 @@ function windowFromMoney(source: Moneyish, kind: string, label: string, resetAt:
   if (usedUsd === null && limitUsd === null && remainingUsd === null && pct === null) return null;
   return {
     kind,
-    label,
     unit: "usd",
     ...(usedUsd !== null ? { used: usedUsd } : {}),
     ...(limitUsd !== null ? { total: limitUsd } : {}),
@@ -54,7 +53,7 @@ export const cursorAdapter: Adapter = {
       label: "WorkosCursorSessionToken",
       kind: "text",
       secret: true,
-      placeholder: "Cookie 里 WorkosCursorSessionToken 的值",
+      placeholder: "Value of WorkosCursorSessionToken from cookies",
     },
   ],
   async fetchUsage(ctx): Promise<AdapterResult> {
@@ -85,13 +84,13 @@ export const cursorAdapter: Adapter = {
     const pooled = summary?.teamUsage?.pooled;
     const resetAt = isoOrNull(summary?.billingCycleEnd);
 
-    let window = windowFromMoney(plan, "monthly", "Plan usage", resetAt);
-    if (!window) window = windowFromMoney(overall, "monthly", "Overall usage", resetAt);
-    if (!window) window = windowFromMoney(pooled, "monthly", "Team pooled", resetAt);
+    let window = windowFromMoney(plan, "monthly", resetAt);
+    if (!window) window = windowFromMoney(overall, "monthly", resetAt);
+    if (!window) window = windowFromMoney(pooled, "monthly", resetAt);
     if (!window) {
       const planPct = clampPercent(numberOrNull((plan as { totalPercentUsed?: unknown }).totalPercentUsed));
       if (planPct !== null) {
-        window = { kind: "monthly", label: "Plan usage", unit: "usd", remainingPct: Math.max(0, Math.min(100, 100 - planPct)), resetAt };
+        window = { kind: "monthly", unit: "usd", remainingPct: Math.max(0, Math.min(100, 100 - planPct)), resetAt };
       }
     }
     if (!window) throw new Error("Cursor: usage-summary has no usable quota numbers");

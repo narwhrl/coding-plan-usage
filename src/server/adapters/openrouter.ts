@@ -32,7 +32,6 @@ export const openrouterAdapter: Adapter = {
       const rem = remaining ?? (usage !== null ? limit - usage : null);
       windows.push({
         kind: "credits",
-        label: "Credits",
         unit: "usd",
         used: usage ?? undefined,
         total: limit,
@@ -54,8 +53,7 @@ export const openrouterAdapter: Adapter = {
           const rem = totalCredits - totalUsage;
           if (balanceAmount === undefined) {
             windows.push({
-              kind: "credits",
-              label: "Credits (lifetime)",
+              kind: "lifetime",
               unit: "usd",
               used: totalUsage,
               total: totalCredits,

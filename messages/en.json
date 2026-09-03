@@ -53,17 +53,22 @@
     "viewDetail": "View details"
   },
   "window": {
-    "5h": "5-hour window",
-    "weekly": "Weekly",
-    "monthly": "Monthly",
+    "5h": "5-hour quota",
+    "weekly": "Weekly quota",
+    "monthly": "Monthly quota",
     "credits": "Credits",
     "requests": "Requests",
     "balance": "Balance",
     "granted": "Granted",
     "topped_up": "Topped up",
-    "session": "Session",
-    "daily": "Daily",
-    "billing": "Billing period"
+    "session": "Session quota",
+    "daily": "Daily quota",
+    "billing": "Billing quota",
+    "mcp": "MCP monthly",
+    "premium": "Premium requests",
+    "chat": "Chat",
+    "lifetime": "Lifetime credits",
+    "withCurrency": "{name} ({currency})"
   },
   "unit": {
     "tokens": "tokens",
@@ -234,5 +239,37 @@
     "minutes": "{count, plural, =1 {# min} other {# min}}",
     "hours": "{count, plural, =1 {# h} other {# h}}",
     "days": "{count, plural, =1 {# day} other {# days}}"
+  },
+  "fields": {
+    "apiKey": "API Key",
+    "json": "JSON",
+    "openrouter": {
+      "apiKey": "API Key (sk-or-...)"
+    },
+    "claude": {
+      "credentialsJson": ".credentials.json (~/.claude/.credentials.json)"
+    },
+    "codex": {
+      "authJson": "auth.json (~/.codex/auth.json)"
+    },
+    "cursor": {
+      "sessionToken": "WorkosCursorSessionToken",
+      "sessionTokenPlaceholder": "Value of WorkosCursorSessionToken from cookies"
+    },
+    "grok": {
+      "authJson": "auth.json (~/.grok/auth.json) or token"
+    },
+    "copilot": {
+      "token": "GitHub token (OAuth / PAT with Copilot)"
+    },
+    "deepseek": {
+      "apiKeyPlaceholder": "sk-..."
+    }
+  },
+  "region": {
+    "zai": "Z.ai (Global)",
+    "bigmodel": "BigModel (China)",
+    "minimaxGlobal": "Global (api.minimax.io)",
+    "minimaxChina": "China (api.minimaxi.com)"
   }
 }

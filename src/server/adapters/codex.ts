@@ -66,7 +66,7 @@ type CodexWindowRaw = {
   limitWindowSeconds?: unknown;
 };
 
-function normalizeWindow(source: CodexWindowRaw | undefined, kind: string, label: string): Window | null {
+function normalizeWindow(source: CodexWindowRaw | undefined, kind: string): Window | null {
   if (!source || typeof source !== "object") return null;
   const usedPct = clampPercent(numberOrNull(source.usedPercent ?? source.used_percent));
   if (usedPct === null) return null;
@@ -80,7 +80,6 @@ function normalizeWindow(source: CodexWindowRaw | undefined, kind: string, label
         : null;
   return {
     kind,
-    label,
     unit: "percent",
     remainingPct: Math.max(0, Math.min(100, 100 - usedPct)),
     resetAt: resetIso,
@@ -182,8 +181,8 @@ export const codexAdapter: Adapter = {
     };
 
     const rateLimit = { ...(usage?.rateLimit ?? {}), ...(usage?.rate_limit ?? {}) } as Record<string, unknown>;
-    const primary = normalizeWindow(rateLimit.primaryWindow as CodexWindowRaw | undefined, "5h", "Primary (5h)");
-    const secondary = normalizeWindow(rateLimit.secondaryWindow as CodexWindowRaw | undefined, "weekly", "Secondary (weekly)");
+    const primary = normalizeWindow(rateLimit.primaryWindow as CodexWindowRaw | undefined, "5h");
+    const secondary = normalizeWindow(rateLimit.secondaryWindow as CodexWindowRaw | undefined, "weekly");
     const windows = [primary, secondary].filter((w): w is Window => w !== null);
     if (windows.length === 0) throw new Error("Codex: wham/usage response has no usable windows");
     return {

@@ -21,7 +21,7 @@ const ctxBase = {
 };
 
 describe("glm adapter", () => {
-  it("normalizes quota/limit into 5h + weekly + monthly windows and queries a 7-day model-usage window", async () => {
+  it("normalizes quota/limit into 5h + weekly + mcp windows and queries a 7-day model-usage window", async () => {
     let modelUsageUrl = "";
     const fetchFn = routeFetch({
       "https://api.z.ai/api/monitor/usage/quota/limit": () =>
@@ -51,12 +51,12 @@ describe("glm adapter", () => {
     expect(result.windows).toHaveLength(3);
     const [w5h, weekly, monthly] = result.windows;
     expect(w5h.kind).toBe("5h");
-    expect(w5h.label).toBe("Token usage (5h)");
+    expect(w5h.label).toBeUndefined();
     expect(w5h.remainingPct).toBe(60);
     expect(weekly.kind).toBe("weekly");
-    expect(weekly.label).toBe("Token usage (weekly)");
+    expect(weekly.label).toBeUndefined();
     expect(weekly.remainingPct).toBe(71);
-    expect(monthly.kind).toBe("monthly");
+    expect(monthly.kind).toBe("mcp");
     expect(monthly.used).toBe(250);
     expect(monthly.total).toBe(1000);
     expect(monthly.remainingPct).toBe(75);

@@ -48,7 +48,7 @@ type UsageWindowRaw = {
   resetsAt?: unknown;
 };
 
-function normalizeClaudeWindow(source: UsageWindowRaw | undefined, kind: string, label: string): Window | null {
+function normalizeClaudeWindow(source: UsageWindowRaw | undefined, kind: string): Window | null {
   if (!source || typeof source !== "object") return null;
   const usedPct = clampPercent(
     source.used_percent !== undefined && source.used_percent !== null
@@ -69,7 +69,6 @@ function normalizeClaudeWindow(source: UsageWindowRaw | undefined, kind: string,
       : null;
   return {
     kind,
-    label,
     unit: "percent",
     remainingPct: Math.max(0, Math.min(100, 100 - usedPct)),
     resetAt: resetIso,
@@ -180,8 +179,8 @@ export const claudeAdapter: Adapter = {
       seven_day?: UsageWindowRaw;
       sevenDay?: UsageWindowRaw;
     };
-    const session = normalizeClaudeWindow(usage?.five_hour ?? usage?.fiveHour, "5h", "Session (5h)");
-    const weekly = normalizeClaudeWindow(usage?.seven_day ?? usage?.sevenDay, "weekly", "Weekly (7d)");
+    const session = normalizeClaudeWindow(usage?.five_hour ?? usage?.fiveHour, "5h");
+    const weekly = normalizeClaudeWindow(usage?.seven_day ?? usage?.sevenDay, "weekly");
     const windows = [session, weekly].filter((w): w is Window => w !== null);
     if (windows.length === 0) throw new Error("Claude: usage response has no usable windows");
 

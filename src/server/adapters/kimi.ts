@@ -91,7 +91,6 @@ export const kimiAdapter: Adapter = {
       if (usedPct !== null) {
         windows.push({
           kind: "weekly",
-          label: "Weekly quota",
           unit: "percent",
           remainingPct: Math.max(0, Math.min(100, 100 - usedPct)),
           resetAt: isoOrNull(pickRaw(usage, DETAIL_RESET_KEYS)),
@@ -115,7 +114,6 @@ export const kimiAdapter: Adapter = {
       seenKinds.add(kind);
       windows.push({
         kind,
-        label: kind === "5h" ? "5-hour session" : "Weekly",
         unit: "percent",
         remainingPct: Math.max(0, Math.min(100, 100 - usedPct)),
         resetAt: isoOrNull(pickRaw(detail, DETAIL_RESET_KEYS) ?? pickRaw(window, DETAIL_RESET_KEYS)),

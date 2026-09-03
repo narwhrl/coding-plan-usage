@@ -33,8 +33,8 @@ function currencyCode(unit: "cny" | "usd"): "CNY" | "USD" {
   return unit === "cny" ? "CNY" : "USD";
 }
 
-function moneyWindow(kind: string, unit: "cny" | "usd", remaining: number, label?: string): Window {
-  return label ? { kind, unit, remaining, label } : { kind, unit, remaining };
+function moneyWindow(kind: string, unit: "cny" | "usd", remaining: number, currency?: string): Window {
+  return currency ? { kind, unit, remaining, label: currency } : { kind, unit, remaining };
 }
 
 export const deepseekAdapter: Adapter = {
@@ -71,16 +71,15 @@ export const deepseekAdapter: Adapter = {
     for (const info of usable) {
       const unit = currencyUnit(info.currency);
       const code = currencyCode(unit);
-      const suffix = multi ? ` (${code})` : "";
       const total = numberOrNull(info.total_balance) as number;
       const granted = numberOrNull(info.granted_balance);
       const toppedUp = numberOrNull(info.topped_up_balance);
-      windows.push(moneyWindow("balance", unit, total, multi ? `Balance${suffix}` : undefined));
+      windows.push(moneyWindow("balance", unit, total, multi ? code : undefined));
       if (granted !== null) {
-        windows.push(moneyWindow("granted", unit, granted, multi ? `Granted${suffix}` : undefined));
+        windows.push(moneyWindow("granted", unit, granted, multi ? code : undefined));
       }
       if (toppedUp !== null) {
-        windows.push(moneyWindow("topped_up", unit, toppedUp, multi ? `Topped up${suffix}` : undefined));
+        windows.push(moneyWindow("topped_up", unit, toppedUp, multi ? code : undefined));
       }
       balances.push({ currency: code, total, granted, toppedUp });
     }

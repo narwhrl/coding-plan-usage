@@ -45,7 +45,7 @@ export const accounts = sqliteTable(
  * snapshots — 每次采集一条，全量保留。
  *
  * windows JSON 元素统一形状（前后端契约）：
- *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|string,
+ *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'mcp'|'premium'|'chat'|'lifetime'|string,
  *     label?: string,
  *     used?: number, total?: number, remaining?: number, remainingPct?: number,
  *     unit: 'tokens'|'credits'|'requests'|'usd'|string,

@@ -29,7 +29,6 @@ function laneWindow(
   statusField: string,
   resetField: string,
   kind: string,
-  label: string,
 ): Window | null {
   if (parseNumberOrNull(item[statusField]) === 3) {
     const pct = parseNumberOrNull(item[percentField]);
@@ -39,7 +38,6 @@ function laneWindow(
   if (remainPct === null) return null;
   return {
     kind,
-    label,
     unit: "percent",
     remainingPct: Math.max(0, Math.min(100, remainPct)),
     resetAt: isoOrNull(item[resetField]),
@@ -125,12 +123,12 @@ export const minimaxAdapter: Adapter = {
           continue;
         }
         const session = attachCounts(
-          laneWindow(general, "current_interval_remaining_percent", "current_interval_status", "end_time", "5h", "5h interval"),
+          laneWindow(general, "current_interval_remaining_percent", "current_interval_status", "end_time", "5h"),
           general,
           "current_interval_total_count",
         );
         const weekly = attachCounts(
-          laneWindow(general, "current_weekly_remaining_percent", "current_weekly_status", "weekly_end_time", "weekly", "Weekly"),
+          laneWindow(general, "current_weekly_remaining_percent", "current_weekly_status", "weekly_end_time", "weekly"),
           general,
           "current_weekly_total_count",
         );

@@ -67,11 +67,10 @@ function snapshotFromCounts(monthly: number | null, limited: number | null): Quo
   };
 }
 
-function copilotWindow(snapshot: QuotaSnapshot | null, label: string, resetAt: string | null): Window | null {
+function copilotWindow(snapshot: QuotaSnapshot | null, kind: string, resetAt: string | null): Window | null {
   if (!snapshot) return null;
   return {
-    kind: "requests",
-    label,
+    kind,
     unit: "requests",
     ...(snapshot.entitlement > 0 ? { total: snapshot.entitlement, used: Math.max(0, snapshot.entitlement - snapshot.remaining) } : {}),
     ...(snapshot.remaining > 0 || snapshot.entitlement > 0 ? { remaining: snapshot.remaining } : {}),
@@ -156,7 +155,7 @@ export const copilotAdapter: Adapter = {
     }
 
     const resetAt = parseQuotaResetDate(body.quota_reset_date ?? body.quotaResetDate);
-    const windows = [copilotWindow(premium, "Premium requests", resetAt), copilotWindow(chat, "Chat", resetAt)].filter(
+    const windows = [copilotWindow(premium, "premium", resetAt), copilotWindow(chat, "chat", resetAt)].filter(
       (w): w is Window => w !== null,
     );
     if (windows.length === 0) throw new Error("Copilot: usage response has no usable quota snapshots");

@@ -170,12 +170,11 @@ function parseGrpcBilling(data: Buffer, nowMs: number): Window[] {
         ? Math.round((preferredReset.ms - nowMs) / 60000)
         : null;
   const days = minutes !== null ? Math.round(minutes / (24 * 60)) : null;
-  const label = days !== null && days >= 4 && days <= 12 ? "Weekly" : "Monthly";
+  const kind = days !== null && days >= 4 && days <= 12 ? "weekly" : "monthly";
 
   return [
     {
-      kind: "credits",
-      label,
+      kind,
       unit: "percent",
       remainingPct: Math.max(0, Math.min(100, 100 - (usedPct ?? 0))),
       resetAt: preferredReset ? new Date(preferredReset.ms).toISOString() : null,
@@ -190,7 +189,7 @@ export const grokAdapter: Adapter = {
   fields: [
     {
       key: "authJson",
-      label: "auth.json (~/.grok/auth.json) 或 token",
+      label: "auth.json (~/.grok/auth.json) or token",
       kind: "json",
       secret: true,
       placeholder: '{"https://auth.x.ai::...":{"key":"..."}}',

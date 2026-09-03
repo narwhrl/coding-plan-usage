@@ -2,7 +2,7 @@
 
 /** 快照 windows JSON 元素统一形状（与 src/server/db/schema.ts 注释同步）。 */
 export type Window = {
-  /** '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'session'|'daily'|'billing'|string */
+  /** '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'session'|'daily'|'billing'|'mcp'|'premium'|'chat'|'lifetime'|string */
   kind: string;
   label?: string;
   used?: number;
@@ -89,7 +89,7 @@ export function isoOrNull(value: unknown): string | null {
 /** 剩余百分比窗口（token-monitor 的 usedPercent 形状 → 本项目 remainingPct 契约）。 */
 export function pctWindow(
   kind: string,
-  label: string,
+  label: string | undefined,
   unit: string,
   usedPercent: number | null,
   resetAt?: string | null,
@@ -98,7 +98,7 @@ export function pctWindow(
   if (used === null) return null;
   return {
     kind,
-    label,
+    ...(label ? { label } : {}),
     unit,
     remainingPct: Math.max(0, Math.min(100, 100 - used)),
     resetAt: resetAt ?? null,
