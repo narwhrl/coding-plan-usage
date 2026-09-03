@@ -60,12 +60,12 @@ describe("minimax adapter", () => {
     expect(result.windows).toHaveLength(4);
     const [w5h, weekly, video, hailuo] = result.windows;
     expect(w5h.kind).toBe("5h");
-    expect(w5h.label).toBe("5h interval");
+    expect(w5h.label).toBeUndefined();
     expect(w5h.remainingPct).toBe(41);
     expect(w5h.unit).toBe("percent");
     expect(w5h.resetAt).toBe(new Date(1780000000000).toISOString());
     expect(weekly.kind).toBe("weekly");
-    expect(weekly.label).toBe("Weekly");
+    expect(weekly.label).toBeUndefined();
     expect(weekly.remainingPct).toBe(94);
     expect(weekly.resetAt).toBe(new Date(1780500000000).toISOString());
     expect(video.label).toBe("video");

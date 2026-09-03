@@ -18,10 +18,12 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import type { ProviderView } from "@/lib/types";
+import { fieldLabel, fieldPlaceholder, regionName } from "@/lib/format";
 
 export function AccountAddForm({ providers, onSaved }: { providers: ProviderView[]; onSaved: () => void }) {
   const t = useTranslations("settings.accounts");
   const tCommon = useTranslations("common");
+  const tRoot = useTranslations();
   const [providerId, setProviderId] = useState("");
   const [label, setLabel] = useState("");
   const [interval, setIntervalValue] = useState("");
@@ -109,14 +111,14 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
 
         {provider?.fields.map((field) => (
           <Field key={field.key}>
-            <FieldLabel htmlFor={`add-cred-${field.key}`}>{field.label}</FieldLabel>
+            <FieldLabel htmlFor={`add-cred-${field.key}`}>{fieldLabel(provider.id, field, tRoot)}</FieldLabel>
             {field.kind === "json" ? (
               <Textarea
                 id={`add-cred-${field.key}`}
                 value={credentialValues[field.key] ?? ""}
                 onChange={(e) => setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                 rows={4}
-                placeholder={field.placeholder ?? "JSON"}
+                placeholder={fieldPlaceholder(provider.id, field, tRoot) ?? tRoot("fields.json")}
                 data-testid={`cred-${field.key}`}
               />
             ) : (
@@ -126,7 +128,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
                 autoComplete="off"
                 value={credentialValues[field.key] ?? ""}
                 onValueChange={(value) => setCredentialValues((prev) => ({ ...prev, [field.key]: value }))}
-                placeholder={field.placeholder}
+                placeholder={fieldPlaceholder(provider.id, field, tRoot)}
                 data-testid={`cred-${field.key}`}
               />
             )}
@@ -143,20 +145,22 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
           <Field>
             <FieldLabel htmlFor="add-baseurl">{t("baseUrl")}</FieldLabel>
             <Select
-              items={provider.baseUrlOptions.map((o) => ({ label: o.label, value: o.value }))}
+              items={provider.baseUrlOptions.map((o) => ({ label: regionName(o, tRoot), value: o.value }))}
               value={baseUrl || provider.baseUrlOptions[0].value}
               onValueChange={(value) => setBaseUrl(value ?? "")}
             >
               <SelectTrigger id="add-baseurl">
                 <SelectValue>
-                  {provider.baseUrlOptions.find((o) => o.value === baseUrl)?.label ??
-                    provider.baseUrlOptions[0].label}
+                  {regionName(
+                    provider.baseUrlOptions.find((o) => o.value === baseUrl) ?? provider.baseUrlOptions[0],
+                    tRoot,
+                  )}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup>
                 {provider.baseUrlOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
-                    {o.label}
+                    {regionName(o, tRoot)}
                   </SelectItem>
                 ))}
               </SelectPopup>

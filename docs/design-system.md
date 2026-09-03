@@ -123,9 +123,13 @@
 
 - 百分比走 `windowPctText`，绝对量走 `windowAmountText`；后者对 `percent` 单位返回 `null`，
   两者不要拼在一起，否则会渲染出「45% 45% %」。
-- 窗口名/单位名用 `windowName`/`unitName`，内部靠 `t.has()` 判断词条是否存在——
-  自定义提供商的 kind 不在词条表里，直接 `t()` 会把 `window.<kind>` 原样显示。
+- 窗口名/单位名用 `windowName`/`unitName`。规范窗口只靠 `kind` 取 `window.<kind>`
+  （5-hour / Weekly / Monthly quota，中文 5 小时额度 / 周额度 / 月额度），不要在适配器里
+  再写 Weekly quota、Token usage (weekly) 这类英文同义 label——历史快照里的同义名由
+  `windowName` 映射到同一词条。模型名等无法用 kind 表达的 label 才原样显示。
+  自定义提供商的 kind 不在词条表里，所以必须走 `t.has()`，不能直接 `t()`。
   next-intl 不支持 `defaultValue`。
+- 凭证字段名和双区 Base URL 用 `fieldLabel` / `regionName`，不要把适配器里的英文原文直接渲染。
 - 相对时间用 `relativeTimeText`、倒计时用 `countdownText`，都从 `time.*` 词条取词，别写死中英文后缀。
 - 窗口重置时刻用 `resetText`：采集有间隔，快照里的 `resetAt` 可能已经过期，那时要说
   「1 小时前」而不是「0 分钟后」。只有确定筛过未来时间的地方（KPI 条的 `nextResetWindow`）

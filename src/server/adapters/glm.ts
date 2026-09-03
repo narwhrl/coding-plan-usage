@@ -3,7 +3,7 @@ import { numberOrNull, type Adapter, type AdapterResult } from "./types";
 /**
  * GLM Coding Plan（官方）。
  * 来源：zai-org/zai-coding-plugins 官方插件 query-usage.mjs。
- *   TOKENS_LIMIT：第一个 → 5 小时 token 窗口，第二个 → 周额度窗口（percentage 为已用百分比）
+ *   TOKENS_LIMIT：第一个 → 5h，第二个 → weekly；TIME_LIMIT → mcp（percentage 为已用百分比）
  * - GET {base}/api/monitor/usage/model-usage?startTime=..&endTime=..（yyyy-MM-dd HH:mm:ss URL 编码）
  *   窗口=近 7 个本地自然日（00:00:00 → 23:59:59.999），汇总进 meta.modelUsage。
  * Authorization 头发原始 token（官方插件不带 Bearer；粘贴带前缀则剥离）。
@@ -11,7 +11,7 @@ import { numberOrNull, type Adapter, type AdapterResult } from "./types";
 
 const BASE_URLS = [
   { label: "Z.ai (Global)", value: "https://api.z.ai" },
-  { label: "BigModel (中国大陆)", value: "https://open.bigmodel.cn" },
+  { label: "BigModel (China)", value: "https://open.bigmodel.cn" },
 ];
 
 /** yyyy-MM-dd HH:mm:ss（服务器本地时间，与官方插件一致）。 */
@@ -72,7 +72,6 @@ export const glmAdapter: Adapter = {
         if (pct !== null) {
           windows.push({
             kind: isFirst ? "5h" : "weekly",
-            label: isFirst ? "Token usage (5h)" : "Token usage (weekly)",
             unit: "percent",
             remainingPct: Math.max(0, Math.min(100, 100 - pct)),
           });
@@ -83,8 +82,7 @@ export const glmAdapter: Adapter = {
         const total = numberOrNull(item.usage);
         if (pct !== null || (used !== null && total !== null)) {
           windows.push({
-            kind: "monthly",
-            label: "MCP usage (monthly)",
+            kind: "mcp",
             unit: "requests",
             ...(used !== null ? { used } : {}),
             ...(total !== null ? { total } : {}),

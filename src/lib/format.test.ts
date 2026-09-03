@@ -10,6 +10,9 @@ import {
   windowName,
   windowPctText,
   windowPrimaryText,
+  fieldLabel,
+  fieldPlaceholder,
+  regionName,
   type Translate,
 } from "./format";
 import type { Window } from "./types";
@@ -141,13 +144,61 @@ describe("relativeTimeText", () => {
 });
 
 describe("windowName / unitName", () => {
-  const t = makeT(["window.5h", "unit.tokens"]);
+  const t = makeT([
+    "window.5h",
+    "window.weekly",
+    "window.monthly",
+    "window.mcp",
+    "window.premium",
+    "window.chat",
+    "window.balance",
+    "window.withCurrency",
+    "unit.tokens",
+  ]);
 
-  it("prefers the adapter label, then the message, then the raw key", () => {
-    expect(windowName({ kind: "5h", label: "Session" }, t)).toBe("Session");
+  it("uses the kind message for known windows and ignores English synonym labels", () => {
+    expect(windowName({ kind: "5h", label: "Token usage (5h)" }, t)).toBe("window.5h");
+    expect(windowName({ kind: "weekly", label: "Weekly quota" }, t)).toBe("window.weekly");
+    expect(windowName({ kind: "weekly", label: "Weekly usage" }, t)).toBe("window.weekly");
+    expect(windowName({ kind: "credits", label: "Weekly" }, t)).toBe("window.weekly");
     expect(windowName({ kind: "5h" }, t)).toBe("window.5h");
+    expect(windowName({ kind: "mcp" }, t)).toBe("window.mcp");
     expect(windowName({ kind: "custom-bucket" }, t)).toBe("custom-bucket");
+  });
+
+  it("keeps distinctive labels and localizes currency suffixes", () => {
+    expect(windowName({ kind: "daily", label: "Hailuo-2.3" }, t)).toBe("Hailuo-2.3");
+    expect(windowName({ kind: "requests", label: "Premium requests" }, t)).toBe("window.premium");
+    expect(windowName({ kind: "requests", label: "Chat" }, t)).toBe("window.chat");
+    expect(windowName({ kind: "balance", label: "Balance (CNY)" }, t)).toBe("window.withCurrency(name=window.balance,currency=CNY)");
+    expect(windowName({ kind: "balance", label: "CNY" }, t)).toBe("window.withCurrency(name=window.balance,currency=CNY)");
     expect(unitName("tokens", t)).toBe("unit.tokens");
     expect(unitName("widgets", t)).toBe("widgets");
+  });
+});
+
+describe("fieldLabel / fieldPlaceholder / regionName", () => {
+  const t = makeT([
+    "fields.apiKey",
+    "fields.cursor.sessionToken",
+    "fields.cursor.sessionTokenPlaceholder",
+    "region.zai",
+  ]);
+
+  it("prefers provider-specific field copy, then the generic key", () => {
+    expect(fieldLabel("glm", { key: "apiKey", label: "API Key" }, t)).toBe("fields.apiKey");
+    expect(fieldLabel("cursor", { key: "sessionToken", label: "WorkosCursorSessionToken" }, t)).toBe(
+      "fields.cursor.sessionToken",
+    );
+    expect(fieldLabel("custom", { key: "other", label: "Secret" }, t)).toBe("Secret");
+    expect(fieldPlaceholder("cursor", { key: "sessionToken", placeholder: "cookie" }, t)).toBe(
+      "fields.cursor.sessionTokenPlaceholder",
+    );
+    expect(fieldPlaceholder("glm", { key: "apiKey", placeholder: "sk-..." }, t)).toBe("sk-...");
+  });
+
+  it("maps known region URLs and leaves unknown hosts alone", () => {
+    expect(regionName({ label: "Z.ai (Global)", value: "https://api.z.ai" }, t)).toBe("region.zai");
+    expect(regionName({ label: "Other", value: "https://example.com" }, t)).toBe("Other");
   });
 });

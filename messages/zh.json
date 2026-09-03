@@ -53,20 +53,25 @@
     "viewDetail": "查看详情"
   },
   "window": {
-    "5h": "5 小时窗口",
+    "5h": "5 小时额度",
     "weekly": "周额度",
-    "monthly": "月度",
+    "monthly": "月额度",
     "credits": "额度",
-    "requests": "请求数",
+    "requests": "请求额度",
     "balance": "余额",
     "granted": "赠金",
     "topped_up": "充值余额",
-    "session": "会话",
-    "daily": "每日",
-    "billing": "账期"
+    "session": "会话额度",
+    "daily": "日额度",
+    "billing": "账期额度",
+    "mcp": "MCP 月额度",
+    "premium": "高级请求",
+    "chat": "对话",
+    "lifetime": "累计额度",
+    "withCurrency": "{name}（{currency}）"
   },
   "unit": {
-    "tokens": "tokens",
+    "tokens": "词元",
     "credits": "credits",
     "requests": "次",
     "usd": "USD",
@@ -233,5 +238,37 @@
     "minutes": "{count} 分钟",
     "hours": "{count} 小时",
     "days": "{count} 天"
+  },
+  "fields": {
+    "apiKey": "API Key",
+    "json": "JSON",
+    "openrouter": {
+      "apiKey": "API Key (sk-or-...)"
+    },
+    "claude": {
+      "credentialsJson": ".credentials.json（~/.claude/.credentials.json）"
+    },
+    "codex": {
+      "authJson": "auth.json（~/.codex/auth.json）"
+    },
+    "cursor": {
+      "sessionToken": "WorkosCursorSessionToken",
+      "sessionTokenPlaceholder": "浏览器 Cookie 里 WorkosCursorSessionToken 的值"
+    },
+    "grok": {
+      "authJson": "auth.json（~/.grok/auth.json）或 token"
+    },
+    "copilot": {
+      "token": "GitHub Token（带 Copilot 权限的 OAuth / PAT）"
+    },
+    "deepseek": {
+      "apiKeyPlaceholder": "sk-..."
+    }
+  },
+  "region": {
+    "zai": "Z.ai（全球）",
+    "bigmodel": "BigModel（中国大陆）",
+    "minimaxGlobal": "全球（api.minimax.io）",
+    "minimaxChina": "中国大陆（api.minimaxi.com）"
   }
 }

@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AccountView, CredentialFieldView } from "@/lib/types";
+import { fieldLabel, fieldPlaceholder } from "@/lib/format";
 
 /** 账户编辑弹窗：凭证留空即保持原值（后端不回传明文）。 */
 export function EditAccountDialog({
@@ -40,6 +41,7 @@ export function EditAccountDialog({
 }) {
   const t = useTranslations("detail");
   const tCommon = useTranslations("common");
+  const tRoot = useTranslations();
   const [label, setLabel] = useState(account.label);
   const [interval, setIntervalValue] = useState(account.config.intervalMinutes?.toString() ?? "");
   const [warnPct, setWarnPct] = useState(account.config.warnPct?.toString() ?? "");
@@ -138,7 +140,9 @@ export function EditAccountDialog({
               ) : null}
               {fields.map((field) => (
                 <Field key={field.key}>
-                  <FieldLabel htmlFor={`edit-cred-${field.key}`}>{field.label}</FieldLabel>
+                  <FieldLabel htmlFor={`edit-cred-${field.key}`}>
+                    {fieldLabel(account.providerId, field, tRoot)}
+                  </FieldLabel>
                   {field.kind === "json" ? (
                     <Textarea
                       id={`edit-cred-${field.key}`}
@@ -147,7 +151,7 @@ export function EditAccountDialog({
                         setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))
                       }
                       rows={3}
-                      placeholder={field.placeholder ?? "JSON"}
+                      placeholder={fieldPlaceholder(account.providerId, field, tRoot) ?? tRoot("fields.json")}
                     />
                   ) : (
                     <Input
@@ -158,7 +162,7 @@ export function EditAccountDialog({
                       onValueChange={(value) =>
                         setCredentialValues((prev) => ({ ...prev, [field.key]: value }))
                       }
-                      placeholder={field.placeholder}
+                      placeholder={fieldPlaceholder(account.providerId, field, tRoot)}
                     />
                   )}
                 </Field>

@@ -89,13 +89,13 @@ describe("deepseek adapter", () => {
       fetchFn,
     });
 
-    expect(result.windows.map((w) => w.label)).toEqual([
-      "Balance (CNY)",
-      "Granted (CNY)",
-      "Topped up (CNY)",
-      "Balance (USD)",
-      "Granted (USD)",
-      "Topped up (USD)",
+    expect(result.windows.map((w) => ({ kind: w.kind, label: w.label }))).toEqual([
+      { kind: "balance", label: "CNY" },
+      { kind: "granted", label: "CNY" },
+      { kind: "topped_up", label: "CNY" },
+      { kind: "balance", label: "USD" },
+      { kind: "granted", label: "USD" },
+      { kind: "topped_up", label: "USD" },
     ]);
     expect(result.balance).toEqual({ amount: 8.5, currency: "CNY" });
   });
