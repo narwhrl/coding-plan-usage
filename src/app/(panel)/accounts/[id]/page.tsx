@@ -5,19 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { RefreshCw, SearchX, TriangleAlert } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogBackdrop,
-  AlertDialogClose,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogPopup,
-  AlertDialogPortal,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  AlertDialogViewport,
-} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Breadcrumb,
@@ -39,7 +26,6 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountStatusBadges } from "@/components/account-status";
-import { EditAccountDialog } from "@/components/edit-account-dialog";
 import { PageHeader } from "@/components/page-header";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import { QuotaBar, quotaTextClassName } from "@/components/quota-bar";
@@ -47,7 +33,7 @@ import { SnapshotHistory } from "@/components/snapshot-history";
 import { StatStrip, StatStripItem, StatTile } from "@/components/stat-strip";
 import { TrendChart } from "@/components/trend-chart";
 import { UsageCard } from "@/components/usage-card";
-import type { AccountView, CredentialFieldView, HistorySnapshot, ProviderView } from "@/lib/types";
+import type { AccountView, HistorySnapshot } from "@/lib/types";
 import {
   compactNumber,
   countdownText,
@@ -73,9 +59,7 @@ export default function AccountDetailPage() {
   const router = useRouter();
   const [account, setAccount] = useState<AccountView | null>(null);
   const [history, setHistory] = useState<HistorySnapshot[] | null>(null);
-  const [providers, setProviders] = useState<ProviderView[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
 
@@ -102,9 +86,6 @@ export default function AccountDetailPage() {
     void load<{ snapshots: HistorySnapshot[] }>(`/api/accounts/${id}/snapshots`, (data) =>
       setHistory(data.snapshots),
     );
-    void load<{ providers: ProviderView[] }>("/api/providers", (data) =>
-      setProviders(data.providers),
-    );
 
     return () => {
       ignore = true;
@@ -122,11 +103,6 @@ export default function AccountDetailPage() {
     }
   };
 
-  const remove = async () => {
-    await fetch(`/api/accounts/${id}`, { method: "DELETE" });
-    router.push("/");
-    router.refresh();
-  };
 
   if (!account) {
     if (!loaded) {
@@ -192,40 +168,16 @@ export default function AccountDetailPage() {
           </>
         }
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing}>
-              <RefreshCw className={refreshing ? "animate-spin" : undefined} />
-              {refreshing ? t("overview.refreshing") : tDetail("refresh")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-              {tDetail("edit")}
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger render={<Button variant="destructive-outline" size="sm" />}>
-                {tDetail("delete")}
-              </AlertDialogTrigger>
-              <AlertDialogPortal>
-                <AlertDialogBackdrop />
-                <AlertDialogViewport>
-                  <AlertDialogPopup>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{tDetail("deleteConfirmTitle")}</AlertDialogTitle>
-                      <AlertDialogDescription>{tDetail("deleteConfirmBody")}</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogClose>{tDetail("cancel")}</AlertDialogClose>
-                      <AlertDialogClose
-                        className="bg-destructive text-white hover:bg-destructive/90"
-                        onClick={remove}
-                      >
-                        {tDetail("deleteConfirmOk")}
-                      </AlertDialogClose>
-                    </AlertDialogFooter>
-                  </AlertDialogPopup>
-                </AlertDialogViewport>
-              </AlertDialogPortal>
-            </AlertDialog>
-          </>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={refresh}
+            disabled={refreshing}
+            aria-label={tDetail("refresh")}
+            data-testid="refresh-account"
+          >
+            <RefreshCw className={refreshing ? "animate-spin" : undefined} />
+          </Button>
         }
       />
 
@@ -337,17 +289,7 @@ export default function AccountDetailPage() {
         {refreshing ? tCommon("loading") : ""}
       </p>
 
-      <EditAccountDialog
-        account={account}
-        fields={providerFields(account, providers)}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        onSaved={requestRefresh}
-      />
     </div>
   );
 }
 
-function providerFields(account: AccountView, providers: ProviderView[]): CredentialFieldView[] {
-  return providers.find((p) => p.id === account.providerId)?.fields ?? [];
-}

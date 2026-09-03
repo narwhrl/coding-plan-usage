@@ -4,7 +4,7 @@ import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, Trash2, Users } from "lucide-react";
+import { Check, Pencil, Trash2, Users } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -41,8 +41,9 @@ import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
 import { AccountAddForm } from "@/components/account-add-form";
 import { AccountStatusBadges } from "@/components/account-status";
 import { CustomProviderForm } from "@/components/custom-provider-form";
-import { PageHeader } from "@/components/page-header";
+import { EditAccountDialog } from "@/components/edit-account-dialog";
 import { ProviderMonogram } from "@/components/provider-monogram";
+import { PageHeader } from "@/components/page-header";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
@@ -52,6 +53,10 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
   const [generalSaved, setGeneralSaved] = useState(false);
+  const [editing, setEditing] = useState<AccountView | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  // 每次打开自增：强制 EditAccountDialog 重挂载，表单不带着上一次的旧值。
+  const [editNonce, setEditNonce] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -135,6 +140,19 @@ export default function SettingsPage() {
                         <p className="truncate text-xs text-muted-foreground">{account.label}</p>
                       </div>
                       <AccountStatusBadges account={account} />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t("accounts.edit")}
+                        onClick={() => {
+                          setEditing(account);
+                          setEditNonce((n) => n + 1);
+                          setEditOpen(true);
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil />
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger
                           render={
@@ -194,6 +212,17 @@ export default function SettingsPage() {
           />
         </TabsContent>
       </Tabs>
+      {/* 放在 Tabs 之外：面板按需卸载不影响弹窗，退出动画也能完整播完。 */}
+      {editing ? (
+        <EditAccountDialog
+          key={`${editing.id}:${editNonce}`}
+          account={editing}
+          fields={providers.find((p) => p.id === editing.providerId)?.fields ?? []}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={requestRefresh}
+        />
+      ) : null}
     </div>
   );
 }
