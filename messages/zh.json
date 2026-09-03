@@ -132,6 +132,14 @@
       "daily": "按天",
       "byModel": "按模型",
       "window": "窗口：{from} – {to}"
+    },
+    "consumption": {
+      "title": "Token 消耗",
+      "lastDay": "昨日",
+      "last7d": "近 7 天",
+      "month": "当月",
+      "perDay": "按天消耗",
+      "tokens": "tokens"
     }
   },
   "settings": {

@@ -11,7 +11,7 @@ import { StatTile } from "@/components/stat-strip";
 import { compactNumber } from "@/lib/format";
 import { dailySeries, latestDaySeries, peakHour, type ModelUsage, type UsagePoint } from "@/lib/model-usage";
 
-type Metric = "tokens" | "calls";
+export type Metric = "tokens" | "calls";
 
 /** GLM model-usage 面板：小时/天柱状图 + 按模型占比。 */
 export function UsageCard({ usage }: { usage: ModelUsage }) {
@@ -88,7 +88,7 @@ export function UsageCard({ usage }: { usage: ModelUsage }) {
   );
 }
 
-function UsageBarChart({
+export function UsageBarChart({
   title,
   data,
   metric,

@@ -133,6 +133,14 @@
       "daily": "Daily",
       "byModel": "By model",
       "window": "Window: {from} – {to}"
+    },
+    "consumption": {
+      "title": "Token usage",
+      "lastDay": "Yesterday",
+      "last7d": "Last 7 days",
+      "month": "This month",
+      "perDay": "Daily usage",
+      "tokens": "tokens"
     }
   },
   "settings": {

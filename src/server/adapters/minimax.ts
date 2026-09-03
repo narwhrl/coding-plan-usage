@@ -10,6 +10,7 @@ import { numberOrNull, isoOrNull, type Adapter, type AdapterResult, type Window 
  * - current_interval_total_count / current_weekly_total_count > 0 时回填 requests 计数（remaining = round(total × 剩余% / 100)）
  * - status==3 且 (percent 缺失或>=100) 为占位 lane，跳过
  * - end_time / weekly_end_time 为 epoch 毫秒重置时间
+ * - GET {www}/account/amount 分页聚合 meta.tokenUsage（昨日/近7天/当月/按天桶），best-effort
  */
 
 const REGION_URLS: { label: string; value: string }[] = [
@@ -78,6 +79,56 @@ function minorLane(row: Record<string, unknown>): Window | null {
   return w;
 }
 
+/** 账单记录 → 昨日/近7天/当月 token 消耗 + 按天桶（best-effort，任何失败返回 null）。 */
+async function fetchTokenUsage(
+  fetchFn: typeof fetch,
+  webBase: string,
+  apiKey: string,
+  now: Date,
+): Promise<Record<string, unknown> | null> {
+  const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const weekAgoMs = now.getTime() - 7 * 86_400_000;
+  const cutoffMs = Math.min(monthStartMs, weekAgoMs);
+  const todayStartMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayStartMs = todayStartMs - 86_400_000;
+  const stats = { lastDayTokens: 0, weekTokens: 0, monthTokens: 0 };
+  const byDay = new Map<string, number>();
+  for (let page = 1; page <= 100; page++) {
+    let rows: Record<string, unknown>[];
+    try {
+      const res = await fetchFn(`${webBase}/account/amount?page=${page}&limit=100&aggregate=false`, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      });
+      if (!res.ok) break;
+      const body = (await res.json()) as { charge_records?: unknown };
+      if (!Array.isArray(body?.charge_records)) break;
+      rows = body.charge_records as Record<string, unknown>[];
+    } catch {
+      break;
+    }
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      const sec = numberOrNull(row.created_at);
+      const tokens = numberOrNull(row.consume_token);
+      if (sec === null || tokens === null || sec <= 0) continue;
+      const ms = sec * 1000;
+      if (ms >= yesterdayStartMs && ms < todayStartMs) stats.lastDayTokens += tokens;
+      if (ms >= weekAgoMs) stats.weekTokens += tokens;
+      if (ms >= monthStartMs) stats.monthTokens += tokens;
+      if (ms >= cutoffMs) {
+        const d = new Date(ms);
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        byDay.set(day, (byDay.get(day) ?? 0) + tokens);
+      }
+    }
+    const oldestSec = numberOrNull(rows[rows.length - 1].created_at) ?? 0;
+    if (rows.length < 100 || oldestSec * 1000 < cutoffMs) break;
+  }
+  if (stats.lastDayTokens === 0 && stats.weekTokens === 0 && stats.monthTokens === 0) return null;
+  const days = [...byDay.entries()].map(([d, tokens]) => ({ d, tokens })).sort((a, b) => (a.d < b.d ? -1 : 1));
+  return { ...stats, days };
+}
+
 export const minimaxAdapter: Adapter = {
   id: "minimax",
   name: "MiniMax Coding Plan",
@@ -138,7 +189,15 @@ export const minimaxAdapter: Adapter = {
             .filter((row) => row !== general)
             .map((row) => minorLane(row))
             .filter((w): w is Window => w !== null);
-          return { windows: [...generalWindows, ...minorWindows] };
+          const windows = [...generalWindows, ...minorWindows];
+          const webBase = base === "https://api.minimax.io" ? "https://www.minimax.io" : "https://www.minimaxi.com";
+          let tokenUsage: Record<string, unknown> | null = null;
+          try {
+            tokenUsage = await fetchTokenUsage(ctx.fetchFn, webBase, apiKey, ctx.now());
+          } catch {
+            /* best-effort：账单失败不影响额度快照 */
+          }
+          return { windows, meta: tokenUsage ? { tokenUsage } : undefined };
         }
         lastError = new Error("MiniMax: general row has no usable percents");
       }

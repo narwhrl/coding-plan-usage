@@ -20,6 +20,19 @@ const ctxBase = {
 
 const TOKEN_PLAN_URL = "https://api.minimax.io/v1/token_plan/remains";
 const FALLBACK_URL = "https://api.minimax.io/v1/api/openplatform/coding_plan/remains";
+const BILLING_URL = "https://www.minimax.io/account/amount";
+
+// 账单聚合用例的本地时间锚点：期望值全部由本地 Date 算术动态构造，不依赖进程时区。
+const now = ctxBase.now();
+const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+const at = (daysAgo: number) => (todayStart - daysAgo * 86_400_000 + 12 * 3_600_000) / 1000; // n 天前当地正午（秒）
+const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+const weekAgo = now.getTime() - 7 * 86_400_000;
+const cutoff = Math.min(monthStart, weekAgo);
+const dayStr = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 function remainsResponse(rows: Record<string, unknown>[]): Response {
   return new Response(JSON.stringify({ data: { model_remains: rows } }), { status: 200 });
@@ -161,5 +174,125 @@ describe("minimax adapter", () => {
         fetchFn,
       }),
     ).rejects.toThrow("MiniMax remains HTTP 401: credentials rejected");
+  });
+
+  it("aggregates billing records into consumption stats", async () => {
+    const records = [
+      { tokens: 1200, sec: at(1) }, // 昨日
+      { tokens: 500, sec: at(3) }, // 3 天前
+      { tokens: 800, sec: at(8) }, // 8 天前（近 7 天之外、当月之内）
+    ];
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_interval_total_count: 0,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+            current_weekly_total_count: 0,
+          },
+        ]),
+      [BILLING_URL]: () =>
+        new Response(
+          JSON.stringify({ charge_records: records.map((r) => ({ consume_token: String(r.tokens), created_at: r.sec })) }),
+          { status: 200 },
+        ),
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    const tokenUsage = result.meta?.tokenUsage as { lastDayTokens: number; weekTokens: number; monthTokens: number; days: { d: string; tokens: number }[] };
+    expect(tokenUsage.lastDayTokens).toBe(1200);
+    expect(tokenUsage.weekTokens).toBe(1700);
+    expect(tokenUsage.monthTokens).toBe(
+      records.filter((r) => r.sec * 1000 >= monthStart).reduce((acc, r) => acc + r.tokens, 0),
+    );
+    // days：cutoff 之内按本地日期桶升序（期望动态构造，与进程时区无关）
+    const expectedDays = records
+      .filter((r) => r.sec * 1000 >= cutoff)
+      .map((r) => ({ d: dayStr(r.sec * 1000), tokens: r.tokens }))
+      .sort((a, b) => (a.d < b.d ? -1 : 1));
+    expect(expectedDays).toHaveLength(3);
+    expect(tokenUsage.days).toEqual(expectedDays);
+  });
+
+  it("stops billing pagination at the cutoff after a full page", async () => {
+    let billingCalls = 0;
+    const rows = Array.from({ length: 100 }, (_, i) => ({
+      consume_token: "100",
+      // 最新 99 条在昨日；最老一条（rows 尾部）早于 cutoff（月初之前）
+      created_at: i < 99 ? at(1) : at(40),
+    }));
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_interval_total_count: 0,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+            current_weekly_total_count: 0,
+          },
+        ]),
+      [BILLING_URL]: () => {
+        billingCalls += 1;
+        return new Response(JSON.stringify({ charge_records: rows }), { status: 200 });
+      },
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    expect(billingCalls).toBe(1); // 最老一条已早于 cutoff → 不再翻页
+    const tokenUsage = result.meta?.tokenUsage as { lastDayTokens: number; monthTokens: number; days: unknown[] };
+    expect(tokenUsage.lastDayTokens).toBe(9900);
+    expect(tokenUsage.monthTokens).toBe(9900); // 40 天前的旧记录不计入当月
+    expect(tokenUsage.days).toEqual([{ d: dayStr(at(1) * 1000), tokens: 9900 }]);
+  });
+
+  it("degrades silently when billing fails", async () => {
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_interval_total_count: 0,
+            end_time: 1780000000000,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+            current_weekly_total_count: 0,
+            weekly_end_time: 1780500000000,
+          },
+          { model_name: "video", current_interval_remaining_percent: "100", current_interval_status: 1, current_interval_total_count: 3, end_time: 1780001200000 },
+          { model_name: "Hailuo-2.3", current_interval_remaining_percent: 33, current_interval_total_count: 30, end_time: 1780002200000 },
+        ]),
+      [BILLING_URL]: () => new Response("boom", { status: 500 }),
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    expect(result.meta?.tokenUsage).toBeUndefined();
+    expect(result.windows).toHaveLength(4);
   });
 });

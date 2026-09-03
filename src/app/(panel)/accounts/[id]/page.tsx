@@ -32,6 +32,7 @@ import { QuotaBar, quotaTextClassName } from "@/components/quota-bar";
 import { SnapshotHistory } from "@/components/snapshot-history";
 import { StatStrip, StatStripItem, StatTile } from "@/components/stat-strip";
 import { TrendChart } from "@/components/trend-chart";
+import { TokenUsageCard } from "@/components/token-usage-card";
 import { UsageCard } from "@/components/usage-card";
 import type { AccountView, HistorySnapshot, Window } from "@/lib/types";
 import {
@@ -48,6 +49,7 @@ import {
 } from "@/lib/format";
 import { heroWindow, nextResetWindow } from "@/lib/overview";
 import { parseModelUsage } from "@/lib/model-usage";
+import { parseTokenUsage } from "@/lib/token-usage";
 
 export default function AccountDetailPage() {
   const params = useParams<{ id: string }>();
@@ -139,8 +141,9 @@ export default function AccountDetailPage() {
   const hero = heroWindow(display);
   const heroIsPct = hero?.remainingPct !== undefined;
   // raw 列形状：{ meta: 适配器 meta, responses: 调试切片 }（见 schema.ts 注释）
-  const raw = display?.meta as { meta?: { modelUsage?: unknown } } | null | undefined;
+  const raw = display?.meta as { meta?: { modelUsage?: unknown; tokenUsage?: unknown } } | null | undefined;
   const usage = parseModelUsage(raw?.meta?.modelUsage);
+  const tokenUsage = parseTokenUsage(raw?.meta?.tokenUsage);
   const nextReset = nextResetWindow(windows);
   const balance = display?.balance;
   const hasBalanceWindow = windows.some((w) => w.kind === "balance");
@@ -272,6 +275,7 @@ export default function AccountDetailPage() {
       ) : null}
 
       {usage ? <UsageCard usage={usage} /> : null}
+      {tokenUsage ? <TokenUsageCard usage={tokenUsage} /> : null}
 
       <TrendChart history={history} warnPct={account.warnThreshold} />
 
