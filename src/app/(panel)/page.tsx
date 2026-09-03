@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Gauge, TriangleAlert } from "lucide-react";
@@ -26,31 +26,47 @@ import { accountForDisplay } from "@/lib/display-currency";
 import { countdownText, windowName } from "@/lib/format";
 import { SegmentedToggle } from "@/components/segmented-toggle";
 
+const LANE_KEY = "cpu_overview_lane";
+const LANE_EVENT = "cpu-overview-lane";
+
+function readStoredLane(): ProviderLane {
+  try {
+    const stored = window.localStorage.getItem(LANE_KEY);
+    if (stored === "api" || stored === "plan") return stored;
+  } catch {
+    /* ignore */
+  }
+  return "plan";
+}
+
+function subscribeOverviewLane(onChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === LANE_KEY || event.key === null) onChange();
+  };
+  window.addEventListener("storage", onStorage);
+  window.addEventListener(LANE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener(LANE_EVENT, onChange);
+  };
+}
+
 export default function OverviewPage() {
   const t = useTranslations("overview");
   const tRoot = useTranslations();
   const tTime = useTranslations("time");
   const [accounts, setAccounts] = useState<AccountView[] | null>(null);
   const [error, setError] = useState(false);
-  const [lane, setLane] = useState<ProviderLane>("plan");
+  const lane = useSyncExternalStore(subscribeOverviewLane, readStoredLane, () => "plan");
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("cpu_overview_lane");
-      if (stored === "api" || stored === "plan") setLane(stored);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const changeLane = (next: ProviderLane) => {
-    setLane(next);
     try {
-      window.localStorage.setItem("cpu_overview_lane", next);
+      window.localStorage.setItem(LANE_KEY, next);
     } catch {
       /* ignore */
     }
+    window.dispatchEvent(new Event(LANE_EVENT));
   };
 
   useEffect(() => {
