@@ -13,6 +13,8 @@ export type Window = {
   /** 'tokens'|'credits'|'requests'|'usd'|'percent'|string */
   unit: string;
   resetAt?: string | null;
+  /** 次要车道：仅详情页展示，不参与概览 hero/warn/spark/KPI 聚合 */
+  minor?: boolean;
 };
 
 /** 添加账户表单的动态字段描述。kind:'json' 渲染 textarea，存解析后的对象。 */

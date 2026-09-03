@@ -9,6 +9,8 @@ export type Window = {
   remainingPct?: number;
   unit: string;
   resetAt?: string | null;
+  /** 次要车道：仅详情页展示，不参与概览 hero/warn/spark/KPI 聚合 */
+  minor?: boolean;
 };
 
 export type SnapshotView = {

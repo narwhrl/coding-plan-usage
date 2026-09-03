@@ -49,8 +49,9 @@ export const accounts = sqliteTable(
  *     label?: string,
  *     used?: number, total?: number, remaining?: number, remainingPct?: number,
  *     unit: 'tokens'|'credits'|'requests'|'usd'|string,
- *     resetAt?: string|null }
+ *     resetAt?: string|null, minor?: boolean }
  * remainingPct 统一 0-100；remaining 优先取 API 原值，否则 total-used。
+ * minor=true 的车道只在详情页展示，聚合一律跳过。
  */
 export const snapshots = sqliteTable(
   "snapshots",
