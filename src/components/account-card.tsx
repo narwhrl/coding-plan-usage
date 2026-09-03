@@ -15,9 +15,10 @@ import {
   windowAmountText,
   windowName,
   windowPctText,
+  windowPrimaryText,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { tightestWindow } from "@/lib/overview";
+import { heroWindow } from "@/lib/overview";
 import { AccountStatusBadges } from "@/components/account-status";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import { QuotaBar, quotaTextClassName } from "@/components/quota-bar";
@@ -30,8 +31,9 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
   const [busy, setBusy] = useState(false);
   const display = account.lastOkSnapshot ?? account.latestSnapshot;
   const isError = account.latestSnapshot?.status === "error";
-  const hero = tightestWindow(display);
+  const hero = heroWindow(display);
   const heroReset = resetText(hero?.resetAt, tTime);
+  const heroIsPct = hero?.remainingPct !== undefined;
   const lastSuccess = relativeTimeText(account.lastOkSnapshot?.fetchedAt, tTime);
 
   const refresh = async () => {
@@ -101,7 +103,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
           </p>
         ) : null}
 
-        {hero && hero.remainingPct !== undefined ? (
+        {hero ? (
           <div className="min-w-0">
             <p className="truncate text-xs text-muted-foreground">{windowName(hero, t)}</p>
             <p
@@ -109,11 +111,11 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
                 "font-heading text-3xl font-semibold tabular-nums",
                 quotaTextClassName(hero.remainingPct, account.warnThreshold),
               )}
-              data-testid="hero-pct"
+              data-testid={heroIsPct ? "hero-pct" : "hero-amount"}
             >
-              {windowPctText(hero)}
+              {windowPrimaryText(hero, t)}
             </p>
-            <HeroMeta w={hero} reset={heroReset} />
+            {heroIsPct ? <HeroMeta w={hero} reset={heroReset} /> : null}
           </div>
         ) : null}
 

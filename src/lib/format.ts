@@ -20,6 +20,11 @@ export function windowPctText(w: Window, digits = 0): string | null {
   return w.remainingPct === undefined ? null : `${w.remainingPct.toFixed(digits)}%`;
 }
 
+/** 卡片/详情主读数：有剩余百分比用百分比，否则用绝对量（预付费余额）。 */
+export function windowPrimaryText(w: Window, t: Translate, pctDigits = 0): string | null {
+  return windowPctText(w, pctDigits) ?? windowAmountText(w, unitName(w.unit, t));
+}
+
 /**
  * 窗口的绝对量文本（remaining 或 used/total），不含百分比。
  * percent 单位的窗口只有百分比信息，返回 null，避免与 windowPctText 重复渲染成 "45% 45% %"。

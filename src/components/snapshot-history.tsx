@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { quotaTextClassName } from "@/components/quota-bar";
-import { shortDateTime, windowName, windowPctText } from "@/lib/format";
+import { shortDateTime, windowName, windowPrimaryText } from "@/lib/format";
 import type { HistorySnapshot } from "@/lib/types";
 
 const COLLAPSED_ROWS = 12;
@@ -79,7 +79,7 @@ export function SnapshotHistory({
                               <span
                                 className={quotaTextClassName(w.remainingPct, warnPct) || undefined}
                               >
-                                {windowPctText(w) ?? "—"}
+                                {windowPrimaryText(w, t) ?? "—"}
                               </span>
                             </Badge>
                           ))

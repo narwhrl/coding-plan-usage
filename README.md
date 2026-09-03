@@ -1,6 +1,6 @@
 # coding-plan-usage
 
-Single-user, self-hosted quota/usage dashboard for LLM coding-plan subscriptions: a scheduler collects quotas from each provider's API on an interval, stores full snapshots in SQLite, and charts the trend. Ten providers built in — GLM / DeepSeek / Codex / Claude / Cursor / Kimi / MiniMax / Grok / Copilot / OpenRouter — and any REST JSON endpoint can be added via a declarative spec.
+Single-user, self-hosted quota/usage dashboard for LLM coding-plan subscriptions (and a few prepaid API balances): a scheduler collects quotas from each provider's API on an interval, stores full snapshots in SQLite, and charts the trend. Ten providers built in — GLM / DeepSeek API / Codex / Claude / Cursor / Kimi / MiniMax / Grok / Copilot / OpenRouter — and any REST JSON endpoint can be added via a declarative spec.
 
 - Single user, no registration; built-in access password (`ACCESS_PASSWORD`)
 - Credentials encrypted at rest with AES-256-GCM (`APP_ENCRYPTION_KEY`)
@@ -49,7 +49,7 @@ In `docker-compose.yml`, set `image: ghcr.io/<owner>/coding-plan-usage:latest` a
 | Provider | Credential | How to get it |
 |---|---|---|
 | GLM Coding Plan | API Key | [Z.ai](https://z.ai) / [Zhipu Open Platform](https://open.bigmodel.cn) console |
-| DeepSeek | API Key | [Platform](https://platform.deepseek.com) → API Keys |
+| DeepSeek API | API Key | Prepaid platform balance (not a coding-plan quota). [Platform](https://platform.deepseek.com) → API Keys |
 | Codex / ChatGPT | auth.json | Paste the full contents of your local `~/.codex/auth.json`; the panel refreshes the token automatically |
 | Claude | .credentials.json | Paste the full contents of your local `~/.claude/.credentials.json`; the panel refreshes the token automatically |
 | Cursor | Session Cookie | The `WorkosCursorSessionToken` value from your browser cookies |

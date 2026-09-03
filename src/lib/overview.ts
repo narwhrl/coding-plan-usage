@@ -28,6 +28,17 @@ export function nextResetWindow(windows: Window[]): Window | null {
   return best;
 }
 
+/**
+ * 卡片/详情主窗口：有 remainingPct 时取最紧配额；否则退回第一条带 remaining 的预付费窗口。
+ * 预付费 API（如 DeepSeek）没有 coding-plan 百分比，不能编一个 100%。
+ */
+export function heroWindow(s: SnapshotView | null | undefined): Window | null {
+  const tightest = tightestWindow(s);
+  if (tightest) return tightest;
+  if (!s) return null;
+  return s.windows.find((w) => !w.minor && typeof w.remaining === "number") ?? null;
+}
+
 /** 展示快照（lastOk ?? latest）全窗口最小数值 pct；无数值窗口返回 undefined。 */
 export function accountMinPct(a: AccountView): number | undefined {
   const w = tightestWindow(a.lastOkSnapshot ?? a.latestSnapshot);
