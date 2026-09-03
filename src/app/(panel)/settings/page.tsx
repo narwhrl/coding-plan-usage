@@ -217,6 +217,7 @@ export default function SettingsPage() {
           key={`${editing.id}:${editNonce}`}
           account={editing}
           fields={providers.find((p) => p.id === editing.providerId)?.fields ?? []}
+          displayCurrencies={providers.find((p) => p.id === editing.providerId)?.displayCurrencies}
           open={editOpen}
           onOpenChange={setEditOpen}
           onSaved={requestRefresh}

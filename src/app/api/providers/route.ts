@@ -4,7 +4,7 @@ import { getDb } from "@/server/db";
 import { providers } from "@/server/db/schema";
 import { requireAuth } from "@/server/auth";
 import { ensureBootstrapped } from "@/server/bootstrap";
-import { getAdapter } from "@/server/adapters/registry";
+import { adapterBilling, getAdapter } from "@/server/adapters/registry";
 
 /** GET /api/providers → builtin+custom 列表（含 fields 表单描述）。 */
 export async function GET(): Promise<NextResponse> {
@@ -23,6 +23,8 @@ export async function GET(): Promise<NextResponse> {
       fields: adapter?.fields ?? [],
       baseUrlOptions: adapter?.baseUrlOptions ?? null,
       hasSpec: row.kind === "custom" && row.declarativeSpec !== null,
+      lane: adapterBilling(adapter, row.kind),
+      displayCurrencies: adapter?.displayCurrencies ? [...adapter.displayCurrencies] : null,
     };
   });
   return NextResponse.json({ providers: list });

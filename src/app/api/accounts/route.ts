@@ -8,7 +8,8 @@ import { requireAuth } from "@/server/auth";
 import { ensureBootstrapped } from "@/server/bootstrap";
 import { encryptSecret } from "@/server/crypto";
 import { getSettings } from "@/server/settings";
-import { getAdapter } from "@/server/adapters/registry";
+import { adapterBilling, getAdapter } from "@/server/adapters/registry";
+import { parseDisplayCurrency } from "@/lib/display-currency";
 import { dailyTightestSeries, parseWindows } from "@/server/spark";
 
 /**
@@ -67,9 +68,19 @@ export async function GET(): Promise<NextResponse> {
       .limit(1)
       .get();
 
-    let config: { intervalMinutes?: number; warnPct?: number; baseUrl?: string } = {};
+    let config: {
+      intervalMinutes?: number;
+      warnPct?: number;
+      baseUrl?: string;
+      displayCurrency?: "CNY" | "USD";
+      demo?: boolean;
+    } = {};
     try {
-      config = JSON.parse(account.config);
+      const parsed = JSON.parse(account.config) as typeof config;
+      config = parsed && typeof parsed === "object" ? parsed : {};
+      const displayCurrency = parseDisplayCurrency(config.displayCurrency);
+      if (displayCurrency) config.displayCurrency = displayCurrency;
+      else delete config.displayCurrency;
     } catch {
       /* ignore */
     }
@@ -84,6 +95,7 @@ export async function GET(): Promise<NextResponse> {
       providerName: provider?.name ?? account.providerId,
       providerKind: provider?.kind ?? "builtin",
       providerUnit: provider?.unit ?? "",
+      lane: adapterBilling(provider ? getAdapter(provider) : undefined, provider?.kind),
       label: account.label,
       enabled: account.enabled === 1,
       config,
@@ -157,6 +169,7 @@ const CreateAccountSchema = z.object({
       intervalMinutes: z.number().int().positive().optional(),
       warnPct: z.number().int().min(0).max(100).optional(),
       baseUrl: z.string().optional(),
+      displayCurrency: z.enum(["CNY", "USD"]).optional(),
     })
     .optional(),
 });

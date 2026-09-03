@@ -50,7 +50,14 @@
     "attention": "需要关注",
     "healthy": "其余账户",
     "allAccounts": "全部账户",
-    "viewDetail": "查看详情"
+    "viewDetail": "查看详情",
+    "laneLabel": "账户类型",
+    "lanePlan": "订阅",
+    "laneApi": "API",
+    "emptyPlan": "还没有订阅账户",
+    "emptyPlanHint": "订阅类提供商（GLM / Claude / Cursor 等）的卡片会出现在这里",
+    "emptyApi": "还没有 API 账户",
+    "emptyApiHint": "预付费 API（DeepSeek 等）的卡片会出现在这里"
   },
   "window": {
     "5h": "5 小时额度",
@@ -101,6 +108,7 @@
     "interval": "采集间隔",
     "warnPct": "预警阈值",
     "baseUrl": "API 地址",
+    "displayCurrency": "显示币种",
     "enabled": "启用",
     "credentials": "凭证（留空保持不变）",
     "noSnapshots": "至少两次成功采集后才会出现趋势",
@@ -158,6 +166,8 @@
       "warnPct": "预警阈值",
       "overrideHint": "留空使用通用设置里的默认值。",
       "baseUrl": "API 地址",
+      "displayCurrency": "显示币种",
+      "displayCurrencyHint": "官方余额可能同时有人民币和美元；卡片只展示选中的一种，没有该币种时退回另一种。",
       "save": "保存",
       "saving": "保存中…",
       "saved": "已添加",

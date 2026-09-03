@@ -49,7 +49,7 @@ insertProvider.run("minimax", "MiniMax Coding Plan", "percent", 7, iso(nowMs));
 insertProvider.run("copilot", "GitHub Copilot", "requests", 9, iso(nowMs));
 
 const insertAccount = db.prepare(
-  "INSERT INTO accounts (id, provider_id, label, credentials_cipher, config, enabled, next_fetch_at, sort_order, created_at) VALUES (?, ?, ?, 'v1:seed', '{\"demo\":true}', ?, ?, ?, ?)",
+  "INSERT INTO accounts (id, provider_id, label, credentials_cipher, config, enabled, next_fetch_at, sort_order, created_at) VALUES (?, ?, ?, 'v1:seed', ?, ?, ?, ?, ?)",
 );
 const insertSnapStmt = db.prepare(
   "INSERT INTO snapshots (account_id, fetched_at, status, error, windows, balance, raw) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -59,8 +59,17 @@ const insertSnapStmt = db.prepare(
 const insertSnap = (accountId, fetchedAt, status, error, windows, balance, raw = null) =>
   insertSnapStmt.run(accountId, fetchedAt, status, error, windows, balance, raw);
 
-const addAccount = (id, providerId, label, enabled, sortOrder) =>
-  insertAccount.run(id, providerId, label, enabled ? 1 : 0, nowMs + 365 * DAY, sortOrder, iso(nowMs));
+const addAccount = (id, providerId, label, enabled, sortOrder, config = { demo: true }) =>
+  insertAccount.run(
+    id,
+    providerId,
+    label,
+    JSON.stringify(config),
+    enabled ? 1 : 0,
+    nowMs + 365 * DAY,
+    sortOrder,
+    iso(nowMs),
+  );
 
 /** 每日 UTC 2/8/14/20 点的历史时刻（未来时刻剔除），升序。 */
 function snapshotTimes() {
@@ -199,21 +208,25 @@ addAccount("demo-cursor", "cursor", "备用额度", true, 3);
   insertSnap("demo-cursor", iso(nowMs), "error", "seed error", null, null);
 }
 
-// ── demo-deepseek：停用，官方预付费余额（无 coding-plan 百分比）──
-addAccount("demo-deepseek", "deepseek", "停用示例", false, 4);
+// ── demo-deepseek：停用，官方预付费余额（无 coding-plan 百分比；CNY+USD 供账户设置切币种）──
+addAccount("demo-deepseek", "deepseek", "停用示例", false, 4, { demo: true, displayCurrency: "CNY" });
 {
   const amounts = [18.2, 16.8, 15.1, 14.0, 13.3, 12.9, 12.4];
   for (const [i, ms] of dailyTimes().entries()) {
     const remaining = amounts[i];
+    const usd = Math.round((remaining / 7.2) * 100) / 100;
     insertSnap(
       "demo-deepseek",
       iso(ms),
       "ok",
       null,
       JSON.stringify([
-        { kind: "balance", unit: "cny", remaining },
-        { kind: "granted", unit: "cny", remaining: 0 },
-        { kind: "topped_up", unit: "cny", remaining },
+        { kind: "balance", unit: "cny", remaining, label: "CNY" },
+        { kind: "granted", unit: "cny", remaining: 0, label: "CNY" },
+        { kind: "topped_up", unit: "cny", remaining, label: "CNY" },
+        { kind: "balance", unit: "usd", remaining: usd, label: "USD" },
+        { kind: "granted", unit: "usd", remaining: 0, label: "USD" },
+        { kind: "topped_up", unit: "usd", remaining: usd, label: "USD" },
       ]),
       JSON.stringify({ amount: remaining, currency: "CNY" }),
       JSON.stringify({ meta: { isAvailable: true }, responses: null }),

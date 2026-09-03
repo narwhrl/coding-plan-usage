@@ -54,10 +54,11 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
         isError && "border-destructive/48",
         // 停用态用灰底而不是整卡 opacity：调透明度会把已经是次级色的提示文字一起拖到 AA 以下，
         // 而「已停用」本来就有徽标说明，底色只需要提供一个远看可辨的线索。
-        account.enabled ? "hover:shadow-sm" : "bg-muted",
+        account.enabled && account.lane !== "api" ? "hover:shadow-sm" : "bg-muted",
       )}
       data-testid="account-card"
       data-account-error={isError ? "true" : undefined}
+      data-account-lane={account.lane ?? "plan"}
     >
       {/* CardHeader 默认是两行 grid，这里显式 flex 才能把图标/名称/刷新排成一行。 */}
       <CardHeader className="flex flex-row items-center gap-3 pb-4">

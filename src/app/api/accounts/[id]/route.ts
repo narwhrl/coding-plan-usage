@@ -16,6 +16,7 @@ const PatchSchema = z.object({
       intervalMinutes: z.number().int().positive().optional(),
       warnPct: z.number().int().min(0).max(100).optional(),
       baseUrl: z.string().optional(),
+      displayCurrency: z.enum(["CNY", "USD"]).optional(),
     })
     .optional(),
   enabled: z.boolean().optional(),
