@@ -18,7 +18,7 @@
   },
   "login": {
     "title": "访问口令",
-    "description": "本面板由 ACCESS_PASSWORD 环境变量保护",
+    "description": "输入口令后进入面板",
     "password": "口令",
     "submit": "进入",
     "wrong": "口令错误",
@@ -26,7 +26,6 @@
   },
   "overview": {
     "title": "账户概览",
-    "subtitle": "按额度紧张程度排序，每 30 秒自动刷新",
     "empty": "还没有账户",
     "emptyHint": "去设置里添加第一个提供商账户",
     "goSettings": "前往设置",
@@ -86,7 +85,7 @@
     "statusError": "失败",
     "raw": "原始响应",
     "edit": "编辑",
-    "refresh": "立即采集",
+    "refresh": "立即刷新",
     "cancel": "取消",
     "save": "保存",
     "label": "标签",
@@ -95,7 +94,7 @@
     "baseUrl": "API 地址",
     "enabled": "启用",
     "credentials": "凭证（留空保持不变）",
-    "noSnapshots": "快照不足，至少需要两次成功采集才能画出趋势",
+    "noSnapshots": "至少两次成功采集后才会出现趋势",
     "rangeSparse": "该时间范围内的快照不足，换个更长的范围看看",
     "rangeSparseAction": "查看全部快照",
     "notFound": "账户不存在或已被删除",
@@ -128,13 +127,11 @@
   },
   "settings": {
     "title": "设置",
-    "subtitle": "管理提供商账户、自定义提供商与全局默认值",
     "tabAccounts": "账户",
     "tabCustom": "自定义提供商",
     "tabGeneral": "通用",
     "accounts": {
       "add": "添加账户",
-      "addHint": "凭证经 AES-256-GCM 加密后入库，保存即触发首次采集。",
       "provider": "提供商",
       "selectProvider": "选择提供商",
       "label": "标签",
@@ -146,16 +143,15 @@
       "baseUrl": "API 地址",
       "save": "保存",
       "saving": "保存中…",
-      "saved": "已保存并触发首次采集",
+      "saved": "已添加",
       "list": "已有账户",
-      "listHint": "点击账户名进入详情，可查看趋势与历史快照。",
       "deleteConfirmTitle": "删除账户",
       "edit": "编辑",
       "deleteConfirmBody": "将删除该账户及其全部快照。",
       "delete": "删除",
       "cancel": "取消",
       "empty": "暂无账户",
-      "emptyHint": "先在左侧添加一个账户"
+      "emptyHint": "用「添加账户」表单创建一个"
     },
     "custom": {
       "name": "名称",
@@ -178,7 +174,7 @@
       "divisor": "除数（可选）",
       "divisorHint": "原值先除以该数，例如以分为单位的余额填 100。",
       "testKey": "API Key（测试用）",
-      "testKeyHint": "只用于本次试采，不会入库。",
+      "testKeyHint": "只用于本次测试，不会保存。",
       "test": "测试",
       "testing": "测试中…",
       "testOk": "测试成功",
@@ -192,25 +188,22 @@
       "deleteConfirmBody": "使用该提供商的账户会一并失效，请先确认没有账户在用。",
       "cancel": "取消",
       "empty": "暂无自定义提供商",
-      "emptyHint": "纯声明式配置，无需写代码",
       "apiKeyForAccount": "API Key",
       "sectionBasics": "基本信息",
       "sectionRequest": "请求",
       "sectionAuth": "认证",
       "sectionMapping": "字段映射",
-      "sectionTest": "试采校验",
-      "subtitle": "把任意返回 JSON 的 REST 端点接成提供商：填地址与字段映射即可，不执行脚本。"
+      "sectionTest": "测试",
+      "subtitle": "用返回 JSON 的 REST 接口添加提供商。"
     },
     "general": {
       "title": "通用",
       "subtitle": "所有未单独配置的账户都使用这里的默认值。",
       "defaultInterval": "默认采集间隔",
-      "defaultIntervalHint": "调度器每 60 秒一跳，到期账户才会真正采集。",
       "warnPct": "全局预警阈值",
-      "warnPctHint": "剩余低于该比例时卡片转为红色告警。",
+      "warnPctHint": "剩余低于该比例时标为预警。",
       "save": "保存",
-      "saved": "已保存",
-      "hint": "账户级配置优先于全局默认值。"
+      "saved": "已保存"
     }
   },
   "common": {

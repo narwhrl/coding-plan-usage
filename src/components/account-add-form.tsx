@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -77,7 +77,6 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
         <CardTitle render={<h2 />} className="text-base">
           {t("add")}
         </CardTitle>
-        <CardDescription>{t("addHint")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5">
         <Field>

@@ -95,7 +95,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} description={t("subtitle")} />
+      <PageHeader title={t("title")} />
       <Tabs defaultValue="accounts" className="gap-6">
         <TabsList>
           <TabsTab value="accounts">{t("tabAccounts")}</TabsTab>
@@ -110,7 +110,6 @@ export default function SettingsPage() {
               <CardTitle render={<h2 />} className="text-base">
                 {t("accounts.list")}
               </CardTitle>
-              <CardDescription>{t("accounts.listHint")}</CardDescription>
             </CardHeader>
             <CardContent>
               {accounts.length === 0 ? (
@@ -305,7 +304,6 @@ function GeneralSettingsForm({
                     <InputGroupText>{tCommon("minutes")}</InputGroupText>
                   </InputGroupAddon>
                 </InputGroup>
-                <FieldDescription>{t("defaultIntervalHint")}</FieldDescription>
               </Field>
               <Field>
                 <FieldLabel htmlFor="general-warn">{t("warnPct")}</FieldLabel>
@@ -338,7 +336,6 @@ function GeneralSettingsForm({
             </span>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </CardContent>
     </Card>
   );
