@@ -1,8 +1,7 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "Self-hosted LLM plan usage panel",
-    "footer": "Self-hosted · SQLite snapshots"
+    "description": "Self-hosted LLM plan usage panel"
   },
   "nav": {
     "overview": "Overview",

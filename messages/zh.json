@@ -1,8 +1,7 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "自托管的 LLM 订阅配额面板",
-    "footer": "自托管 · SQLite 快照"
+    "description": "自托管的 LLM 订阅配额面板"
   },
   "nav": {
     "overview": "概览",
