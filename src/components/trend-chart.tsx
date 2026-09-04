@@ -107,7 +107,7 @@ export function TrendChart({
                     minTickGap={48}
                   />
                   <YAxis
-                    width={isPercent ? 36 : 48}
+                    width="auto"
                     domain={isPercent ? [0, 100] : ["auto", "auto"]}
                     ticks={isPercent ? [0, 25, 50, 75, 100] : undefined}
                     tickFormatter={(v: number) => (isPercent ? `${v}%` : compactNumber(v))}

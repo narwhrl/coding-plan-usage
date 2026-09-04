@@ -114,7 +114,9 @@ export function UsageBarChart({
               minTickGap={16}
             />
             <YAxis
-              width={44}
+              // 固定宽度会把 tick 文字裁进轴带（"240.0K" / "1.23M" 超出 44px）。
+              // auto 按实测 bbox 留位，长刻度不再被遮挡。
+              width="auto"
               tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               tickLine={false}
               axisLine={false}
