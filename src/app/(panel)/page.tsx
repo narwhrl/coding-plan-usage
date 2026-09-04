@@ -101,6 +101,17 @@ export default function OverviewPage() {
   }, [refreshVersion]);
 
   if (accounts === null) {
+    if (error) {
+      return (
+        <div className="space-y-6">
+          <PageHeader title={t("title")} />
+          <Alert variant="error">
+            <TriangleAlert />
+            <AlertTitle>{t("loadFailed")}</AlertTitle>
+          </Alert>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6" aria-busy="true">
         <PageHeader title={t("title")} />

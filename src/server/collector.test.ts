@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { getDb, migrate, _resetForTest } from "./db";
 import { bootstrapProviders } from "./bootstrap";
-import { pollAccount } from "./collector";
+import { pollAccount, _resetInflightForTest } from "./collector";
 import { accounts, providers, settings, snapshots } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { applyProxyUrl } from "./account-config";
@@ -42,6 +42,7 @@ function makeAccount(overrides: Partial<typeof accounts.$inferInsert> = {}): str
 }
 
 beforeEach(() => {
+  _resetInflightForTest();
   migrate();
   bootstrapProviders();
   const db = getDb();
@@ -202,6 +203,35 @@ describe("collector", () => {
       const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
       // 成功清零后单次失败应走常规间隔而非 6h 退避
       expect(account.nextFetchAt!).toBeLessThan(before + 20 * 60_000);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("coalesces concurrent polls of the same account into one fetch", async () => {
+    const originalFetch = globalThis.fetch;
+    let release!: (value: Response) => void;
+    let calls = 0;
+    globalThis.fetch = (async () => {
+      calls += 1;
+      return new Promise<Response>((resolve) => {
+        release = resolve;
+      });
+    }) as typeof fetch;
+    const id = makeAccount();
+    try {
+      const first = pollAccount(id);
+      const second = pollAccount(id);
+      const started = Date.now();
+      while (calls === 0 && Date.now() - started < 1000) {
+        await new Promise((r) => setTimeout(r, 5));
+      }
+      expect(calls).toBe(1);
+      release(new Response(JSON.stringify({ data: { total: 10, remaining: 5 } }), { status: 200 }));
+      await Promise.all([first, second]);
+      expect(calls).toBe(1);
+      const db = getDb();
+      expect(db.select().from(snapshots).where(eq(snapshots.accountId, id)).all()).toHaveLength(1);
     } finally {
       globalThis.fetch = originalFetch;
     }

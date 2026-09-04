@@ -1,7 +1,9 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "Self-hosted LLM plan usage panel"
+    "description": "Self-hosted LLM plan usage panel",
+    "authOpenTitle": "No access password",
+    "authOpenHint": "Anyone who can open this URL can see accounts and settings. Fine on localhost or a private network; set ACCESS_PASSWORD before exposing the host."
   },
   "nav": {
     "overview": "Overview",
@@ -126,6 +128,7 @@
     "rangeSparseAction": "Show all snapshots",
     "notFound": "This account no longer exists",
     "notFoundHint": "It may have been deleted, or the ID in the link is wrong.",
+    "loadFailed": "Could not load this account",
     "summaryTightest": "Tightest quota",
     "summaryNextReset": "Next reset",
     "summaryBalance": "Balance",
@@ -162,6 +165,7 @@
   },
   "settings": {
     "title": "Settings",
+    "loadFailed": "Could not load settings. Refresh and try again.",
     "tabAccounts": "Accounts",
     "tabCustom": "Custom providers",
     "tabGeneral": "General",
@@ -254,7 +258,8 @@
       "rawRetentionDays": "Raw response retention",
       "rawRetentionDaysHint": "Raw response bodies are only kept for debugging and are cleared after this many days.",
       "save": "Save",
-      "saved": "Saved"
+      "saved": "Saved",
+      "saveFailed": "Save failed, try again"
     },
     "notify": {
       "title": "Notifications",
@@ -283,6 +288,7 @@
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong",
+    "errorHint": "This page failed to render. Retry, or go back to the overview.",
     "retry": "Retry",
     "close": "Close",
     "confirm": "Confirm",

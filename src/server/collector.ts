@@ -7,6 +7,7 @@ import { decryptStoredProxy, parseStoredConfig, type StoredAccountConfig } from 
 import { decryptSecret, encryptSecret } from "./crypto";
 import { createAccountFetch } from "./proxy-fetch";
 import { getNotifySettings, getSettings } from "./settings";
+import { FETCH_TIMEOUT_MS } from "./fetch-timeout";
 import {
   decideNotifyEvent,
   dispatchWebhook,
@@ -128,11 +129,32 @@ async function maybeNotify(args: {
     .run();
 }
 
+/** 同一账户同时只跑一轮采集，避免 Codex/Claude 轮换 refresh token 时互相覆盖。 */
+const inflight = new Map<string, Promise<void>>();
+
+export function _resetInflightForTest(): void {
+  inflight.clear();
+}
+
 /**
  * 采集单账户：读账户 → 解密 → adapter.fetchUsage → 写快照 → 推进 nextFetchAt → 按电平迁移告警。
  * 失败写 error 快照（message），保留最后一次成功快照（不删除）。
+ * 同一账户已有一轮在跑时，后来者等它结束并复用结果，不再开第二轮。
  */
 export async function pollAccount(accountId: string, options: { manual?: boolean } = {}): Promise<void> {
+  const existing = inflight.get(accountId);
+  if (existing) {
+    await existing;
+    return;
+  }
+  const run = pollAccountUnchecked(accountId, options).finally(() => {
+    inflight.delete(accountId);
+  });
+  inflight.set(accountId, run);
+  await run;
+}
+
+async function pollAccountUnchecked(accountId: string, options: { manual?: boolean }): Promise<void> {
   const db = getDb();
   const account = db.select().from(accounts).where(eq(accounts.id, accountId)).get();
   if (!account) throw new Error(`pollAccount: account ${accountId} not found`);
@@ -221,7 +243,7 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
     throw error;
   }
 
-  const { fetchFn, close } = createAccountFetch(proxy);
+  const { fetchFn, close } = createAccountFetch(proxy, { timeoutMs: FETCH_TIMEOUT_MS });
   const nowIso = new Date().toISOString();
   let rawResult: unknown = null;
 

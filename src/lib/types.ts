@@ -22,6 +22,7 @@ export type SnapshotView = {
   error: string | null;
   windows: Window[];
   balance: { amount: number; currency?: string } | null;
+  /** 适配器 meta（modelUsage / tokenUsage / isAvailable 等），不含 raw.responses。 */
   meta?: Record<string, unknown> | null;
 };
 

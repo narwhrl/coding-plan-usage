@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { checkPassword, issueSessionCookie, isAuthEnabled } from "@/server/auth";
+import { checkPassword, issueSessionCookie, isAuthEnabled, requestIsHttps } from "@/server/auth";
 
 const LoginSchema = z.object({ password: z.string().min(1) });
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!checkPassword(parsed.data.password)) {
     return NextResponse.json({ error: "wrong password" }, { status: 401 });
   }
-  const cookie = issueSessionCookie();
+  const cookie = issueSessionCookie(requestIsHttps(request));
   const response = NextResponse.json({ ok: true });
   response.cookies.set(cookie.name, cookie.value, cookie.options as never);
   return response;

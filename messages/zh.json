@@ -1,7 +1,9 @@
 {
   "app": {
     "name": "Coding Plan Usage",
-    "description": "自托管的 LLM 订阅配额面板"
+    "description": "自托管的 LLM 订阅配额面板",
+    "authOpenTitle": "未设置访问口令",
+    "authOpenHint": "当前任何人打开这个地址都能看到账户和设置。只适合本机或内网；暴露到公网前请设置 ACCESS_PASSWORD。"
   },
   "nav": {
     "overview": "概览",
@@ -125,6 +127,7 @@
     "rangeSparseAction": "查看全部快照",
     "notFound": "账户不存在或已被删除",
     "notFoundHint": "它可能已被删除，或链接里的 ID 不对。",
+    "loadFailed": "账户加载失败",
     "summaryTightest": "最紧额度",
     "summaryNextReset": "下次重置",
     "summaryBalance": "余额",
@@ -161,6 +164,7 @@
   },
   "settings": {
     "title": "设置",
+    "loadFailed": "设置加载失败，请刷新重试",
     "tabAccounts": "账户",
     "tabCustom": "自定义提供商",
     "tabGeneral": "通用",
@@ -253,7 +257,8 @@
       "rawRetentionDays": "原始响应留存",
       "rawRetentionDaysHint": "仅用于排障的原始响应体，超期后清空以节省磁盘。",
       "save": "保存",
-      "saved": "已保存"
+      "saved": "已保存",
+      "saveFailed": "保存失败，请重试"
     },
     "notify": {
       "title": "通知",
@@ -282,6 +287,7 @@
   "common": {
     "loading": "加载中…",
     "error": "出错了",
+    "errorHint": "页面渲染失败。可以重试，或回到概览。",
     "retry": "重试",
     "close": "关闭",
     "confirm": "确认",

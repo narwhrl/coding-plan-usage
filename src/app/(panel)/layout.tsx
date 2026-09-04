@@ -1,6 +1,8 @@
 import pkg from "../../../package.json";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { TriangleAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAuthenticated, isAuthEnabled } from "@/server/auth";
 import { TopBar } from "@/components/top-bar";
 
@@ -13,6 +15,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen flex-col">
       <TopBar authEnabled={isAuthEnabled()} />
+      {!isAuthEnabled() ? (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6">
+          <Alert variant="warning">
+            <TriangleAlert />
+            <AlertTitle>{t("authOpenTitle")}</AlertTitle>
+            <AlertDescription>{t("authOpenHint")}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-1 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6">

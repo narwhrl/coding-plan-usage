@@ -61,36 +61,70 @@ export default function AccountDetailPage() {
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
-  const [account, setAccount] = useState<AccountView | null>(null);
-  const [history, setHistory] = useState<HistorySnapshot[] | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [accountRow, setAccountRow] = useState<AccountView | null>(null);
+  const [accountId, setAccountId] = useState(id);
+  const [historyRows, setHistoryRows] = useState<HistorySnapshot[] | null>(null);
+  const [historyId, setHistoryId] = useState(id);
+  const [loadState, setLoadState] = useState<"loading" | "ok" | "missing" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
+  const shownAccount = accountId === id ? accountRow : null;
+  const shownState = accountId === id ? loadState : "loading";
+  const shownHistory = historyId === id ? historyRows : null;
 
   useEffect(() => {
     let ignore = false;
 
-    // 三个请求各自落地，慢的快照接口不该拖住头部和窗口卡片的首屏。
-    async function load<T>(url: string, apply: (data: T) => void) {
+    // 账户和快照各自落地：慢的历史接口不该拖住头部。失败要能和「账户不存在」分开。
+    async function loadAccount() {
       try {
-        const res = await fetch(url);
-        if (!res.ok || ignore) return;
-        const data = (await res.json()) as T;
-        if (!ignore) apply(data);
+        const res = await fetch("/api/accounts");
+        if (ignore) return;
+        if (!res.ok) {
+          setAccountRow(null);
+          setAccountId(id);
+          setLoadState("error");
+          return;
+        }
+        const data = (await res.json()) as { accounts: AccountView[] };
+        if (ignore) return;
+        const found = data.accounts.find((item) => item.id === id) ?? null;
+        setAccountRow(found);
+        setAccountId(id);
+        setLoadState(found ? "ok" : "missing");
       } catch {
-        // 网络失败按“无数据”处理，页面留在空态而不是骨架屏。
+        if (!ignore) {
+          setAccountRow(null);
+          setAccountId(id);
+          setLoadState("error");
+        }
       }
     }
 
-    void load<{ accounts: AccountView[] }>("/api/accounts", (data) =>
-      setAccount(data.accounts.find((item) => item.id === id) ?? null),
-    ).finally(() => {
-      if (!ignore) setLoaded(true);
-    });
-    void load<{ snapshots: HistorySnapshot[] }>(`/api/accounts/${id}/snapshots`, (data) =>
-      setHistory(data.snapshots),
-    );
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/accounts/${id}/snapshots`);
+        if (ignore) return;
+        if (!res.ok) {
+          setHistoryRows([]);
+          setHistoryId(id);
+          return;
+        }
+        const data = (await res.json()) as { snapshots: HistorySnapshot[] };
+        if (!ignore) {
+          setHistoryRows(data.snapshots);
+          setHistoryId(id);
+        }
+      } catch {
+        if (!ignore) {
+          setHistoryRows([]);
+          setHistoryId(id);
+        }
+      }
+    }
 
+    void loadAccount();
+    void loadHistory();
     return () => {
       ignore = true;
     };
@@ -108,14 +142,27 @@ export default function AccountDetailPage() {
   };
 
 
-  if (!account) {
-    if (!loaded) {
+  if (!shownAccount) {
+    if (shownState === "loading") {
       return (
         <div className="space-y-6" aria-busy="true">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-11 w-72" />
           <Skeleton className="h-20 rounded-2xl" />
           <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      );
+    }
+    if (shownState === "error") {
+      return (
+        <div className="space-y-6">
+          <Alert variant="error">
+            <TriangleAlert />
+            <AlertTitle>{tDetail("loadFailed")}</AlertTitle>
+          </Alert>
+          <Button variant="outline" onClick={() => requestRefresh()}>
+            {tCommon("retry")}
+          </Button>
         </div>
       );
     }
@@ -137,16 +184,16 @@ export default function AccountDetailPage() {
     );
   }
 
+  const account = shownAccount;
+  const history = shownHistory;
   const shown = accountForDisplay(account);
   const display = shown.lastOkSnapshot ?? shown.latestSnapshot;
   const windows = display?.windows ?? [];
   const historyShown = historyForCurrency(history, parseDisplayCurrency(account.config.displayCurrency));
   const hero = heroWindow(display);
   const heroIsPct = hero?.remainingPct !== undefined;
-  // raw 列形状：{ meta: 适配器 meta, responses: 调试切片 }（见 schema.ts 注释）
-  const raw = display?.meta as { meta?: { modelUsage?: unknown; tokenUsage?: unknown } } | null | undefined;
-  const usage = parseModelUsage(raw?.meta?.modelUsage);
-  const tokenUsage = parseTokenUsage(raw?.meta?.tokenUsage);
+  const usage = parseModelUsage(display?.meta?.modelUsage);
+  const tokenUsage = parseTokenUsage(display?.meta?.tokenUsage);
   const nextReset = nextResetWindow(windows);
   const balance = display?.balance;
   const hasBalanceWindow = windows.some((w) => w.kind === "balance");

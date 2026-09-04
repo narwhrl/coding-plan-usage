@@ -41,7 +41,7 @@ In `docker-compose.yml`, set `image: ghcr.io/<owner>/coding-plan-usage:latest` a
 
 | Variable | Required | Description |
 |---|---|---|
-| `ACCESS_PASSWORD` | No | Access password; unset means no auth |
+| `ACCESS_PASSWORD` | No | Access password; unset means no auth (the panel shows a warning). Do not expose the host beyond localhost without it |
 | `APP_ENCRYPTION_KEY` | Yes | Master key for credential encryption (any non-empty string, scrypt-derived); once set, never change it |
 | `SQLITE_PATH` | No | SQLite path, default `./data/app.db` (`/data/app.db` inside the container) |
 | `TZ` | No | Timezone (GLM query windows are built from server local time) |
@@ -95,6 +95,19 @@ secret are stored encrypted like provider credentials and are never echoed back 
 There are no built-in IM or email templates — fan out from n8n / Bark / your own script instead. See
 [docs/notifications.md](docs/notifications.md) for the payload contract, the suppression rules and a
 signature-verification snippet.
+
+## Backup and restore
+
+SQLite plus `APP_ENCRYPTION_KEY` are the two things that matter. Credentials are ciphertext in the
+database; without the key they cannot be decrypted (you would re-paste them). History without a
+backup is gone.
+
+1. Stop the container so WAL is flushed: `docker compose stop`
+2. Copy `./data/app.db` **and** `./data/app.db-wal` / `./data/app.db-shm` if they exist
+3. Keep `APP_ENCRYPTION_KEY` (and `ACCESS_PASSWORD`) somewhere else — not next to the db file
+4. To restore: stop the container, replace those files, start again
+
+Do not change `APP_ENCRYPTION_KEY` on a live database. If you must rotate it, add the accounts again.
 
 ## Local development
 
