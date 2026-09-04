@@ -29,9 +29,15 @@ describe("glm adapter", () => {
           JSON.stringify({
             data: {
               limits: [
-                { type: "TOKENS_LIMIT", percentage: 40 },
-                { type: "TOKENS_LIMIT", percentage: 29 },
-                { type: "TIME_LIMIT", percentage: 25, currentValue: 250, usage: 1000 },
+                { type: "TOKENS_LIMIT", percentage: 40, nextResetTime: 1776336869810 },
+                { type: "TOKENS_LIMIT", percentage: 29, nextResetTime: 1776934952998 },
+                {
+                  type: "TIME_LIMIT",
+                  percentage: 25,
+                  currentValue: 250,
+                  usage: 1000,
+                  nextResetTime: 1777712552994,
+                },
               ],
             },
           }),
@@ -53,13 +59,16 @@ describe("glm adapter", () => {
     expect(w5h.kind).toBe("5h");
     expect(w5h.label).toBeUndefined();
     expect(w5h.remainingPct).toBe(60);
+    expect(w5h.resetAt).toBe(new Date(1776336869810).toISOString());
     expect(weekly.kind).toBe("weekly");
     expect(weekly.label).toBeUndefined();
     expect(weekly.remainingPct).toBe(71);
+    expect(weekly.resetAt).toBe(new Date(1776934952998).toISOString());
     expect(monthly.kind).toBe("mcp");
     expect(monthly.used).toBe(250);
     expect(monthly.total).toBe(1000);
     expect(monthly.remainingPct).toBe(75);
+    expect(monthly.resetAt).toBe(new Date(1777712552994).toISOString());
     expect((result.meta?.modelUsage as unknown[]).length).toBe(1);
 
     const now = ctxBase.now();
@@ -89,6 +98,31 @@ describe("glm adapter", () => {
       fetchFn,
     });
     expect(seen[0]).toBe("tok-123");
+  });
+
+  it("maps next_reset_time and leaves resetAt null when the field is missing", async () => {
+    const fetchFn = routeFetch({
+      "https://api.z.ai/api/monitor/usage/quota/limit": () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              limits: [
+                { type: "TOKENS_LIMIT", percentage: 10, next_reset_time: 1776336869810 },
+                { type: "TOKENS_LIMIT", percentage: 20 },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await glmAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "tok-123" },
+      config: { baseUrl: "https://api.z.ai" },
+      fetchFn,
+    });
+    expect(result.windows[0].resetAt).toBe(new Date(1776336869810).toISOString());
+    expect(result.windows[1].resetAt).toBeNull();
   });
 });
 
