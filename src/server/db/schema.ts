@@ -30,7 +30,7 @@ export const accounts = sqliteTable(
     label: text("label").notNull(),
     /** AES-256-GCM 密文，v1:<base64(salt|iv|tag|ct)> */
     credentialsCipher: text("credentials_cipher").notNull(),
-    /** JSON: {intervalMinutes?:int, warnPct?:int, baseUrl?:string, displayCurrency?:"CNY"|"USD"} */
+    /** JSON: {intervalMinutes?:int, warnPct?:int, baseUrl?:string, displayCurrency?:"CNY"|"USD", proxyCipher?:string} */
     config: text("config").notNull().default("{}"),
     enabled: integer("enabled").notNull().default(1),
     /** ms epoch；null 视为立即到期 */
@@ -55,7 +55,7 @@ export const accounts = sqliteTable(
  * 永不删除且保留 raw（详情页的 meta 住在那条 raw 里）。见 server/prune.ts。
  *
  * windows JSON 元素统一形状（前后端契约）：
- *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'mcp'|'premium'|'chat'|'lifetime'|string,
+ *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'mcp'|'premium'|'chat'|'lifetime'|'cursor_models'|'other_models'|'grok_bot'|string,
  *     label?: string,
  *     used?: number, total?: number, remaining?: number, remainingPct?: number,
  *     unit: 'tokens'|'credits'|'requests'|'usd'|string,

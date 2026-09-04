@@ -1,4 +1,4 @@
-import { clampPercent, numberOrNull, type Adapter, type AdapterResult, type Window } from "./types";
+import { isoOrNull, numberOrNull, pctWindow, type Adapter, type AdapterResult, type Window } from "./types";
 
 /**
  * Codex / ChatGPT（非官方）。
@@ -8,7 +8,8 @@ import { clampPercent, numberOrNull, type Adapter, type AdapterResult, type Wind
  *   {client_id:"app_EMoamEEZ73f0CkXaXp7hrann", grant_type:"refresh_token", refresh_token}
  * 用量：GET https://chatgpt.com/backend-api/wham/usage，
  *   Authorization: Bearer <access_token> + chatgpt-account-id: <account_id>。
- * 响应解析规范：token-monitor limitCollector.js codex* 函数（MIT）。
+ * 响应是 snake_case（rate_limit.primary_window / reset_at）；顺带接受旧 camelCase。
+ * 解析规范：token-monitor limitCollector.js normalizeCodexUsage* / mapCodexRateLimitsToProvider（MIT）。
  */
 
 const REFRESH_URL = "https://auth.openai.com/oauth/token";
@@ -56,34 +57,112 @@ function accountId(auth: CodexTokens): string {
   return id;
 }
 
-type CodexWindowRaw = {
-  used_percent?: unknown;
-  usedPercent?: unknown;
-  resets_at?: unknown;
-  resetsAt?: unknown;
-  resetAt?: unknown;
-  limit_window_seconds?: unknown;
-  limitWindowSeconds?: unknown;
-};
+type CodexWindowRaw = Record<string, unknown>;
 
-function normalizeWindow(source: CodexWindowRaw | undefined, kind: string): Window | null {
-  if (!source || typeof source !== "object") return null;
-  const usedPct = clampPercent(numberOrNull(source.usedPercent ?? source.used_percent));
-  if (usedPct === null) return null;
-  const resetRaw = source.resetsAt ?? source.resetAt ?? source.resets_at;
-  const resetMs = numberOrNull(resetRaw);
-  const resetIso =
-    typeof resetRaw === "string" && Number.isFinite(Date.parse(resetRaw))
-      ? new Date(Date.parse(resetRaw)).toISOString()
-      : resetMs !== null && resetMs > 1e9
-        ? new Date(resetMs > 1e12 ? resetMs : resetMs * 1000).toISOString()
-        : null;
-  return {
-    kind,
-    unit: "percent",
-    remainingPct: Math.max(0, Math.min(100, 100 - usedPct)),
-    resetAt: resetIso,
-  };
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function firstDefined(source: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+  return undefined;
+}
+
+function pickWindow(rateLimit: Record<string, unknown>, keys: string[]): CodexWindowRaw | undefined {
+  const value = firstDefined(rateLimit, keys);
+  return asRecord(value) ?? undefined;
+}
+
+/** token-monitor codexWindowKind：按时长归类；本项目 5 小时窗用 kind=5h（不是 session）。 */
+function windowKindFromSource(source: CodexWindowRaw, fallback: string): string {
+  const seconds = numberOrNull(firstDefined(source, ["limitWindowSeconds", "limit_window_seconds"]));
+  const minutes =
+    seconds !== null && seconds > 0
+      ? seconds / 60
+      : numberOrNull(
+          firstDefined(source, ["windowDurationMins", "window_duration_mins", "windowMinutes", "window_minutes"]),
+        );
+  if (minutes === null || minutes <= 0) return fallback;
+  if (minutes === 30 * 24 * 60) return "billing";
+  if (minutes >= 7 * 24 * 60) return "weekly";
+  if (minutes >= 24 * 60) return "daily";
+  if (minutes <= 6 * 60) return "5h";
+  return fallback;
+}
+
+function resetAtFromWindow(source: CodexWindowRaw, now: Date): string | null {
+  const direct = isoOrNull(firstDefined(source, ["resetsAt", "resetAt", "reset_at", "resets_at"]));
+  if (direct) return direct;
+  const after = numberOrNull(firstDefined(source, ["resetAfterSeconds", "reset_after_seconds"]));
+  if (after === null || after < 0) return null;
+  return new Date(now.getTime() + after * 1000).toISOString();
+}
+
+function normalizeWindow(
+  source: CodexWindowRaw | undefined,
+  fallbackKind: string,
+  now: Date,
+  extra?: { label?: string; minor?: boolean },
+): Window | null {
+  if (!source) return null;
+  const usedPct = numberOrNull(firstDefined(source, ["usedPercent", "used_percent"]));
+  const window = pctWindow(windowKindFromSource(source, fallbackKind), extra?.label, "percent", usedPct, resetAtFromWindow(source, now));
+  if (!window) return null;
+  return extra?.minor ? { ...window, minor: true } : window;
+}
+
+function rateLimitObject(value: unknown): Record<string, unknown> {
+  return asRecord(value) ?? {};
+}
+
+function mergeRateLimit(...values: unknown[]): Record<string, unknown> {
+  return Object.assign({}, ...values.map(rateLimitObject));
+}
+
+function officialWindows(rateLimit: Record<string, unknown>, now: Date): Window[] {
+  const primary = normalizeWindow(pickWindow(rateLimit, ["primaryWindow", "primary_window", "primary"]), "5h", now);
+  const secondary = normalizeWindow(
+    pickWindow(rateLimit, ["secondaryWindow", "secondary_window", "secondary"]),
+    "weekly",
+    now,
+  );
+  return [primary, secondary].filter((w): w is Window => w !== null);
+}
+
+function additionalWindows(usage: Record<string, unknown>, now: Date, minor: boolean): Window[] {
+  const raw = usage.additionalRateLimits ?? usage.additional_rate_limits;
+  if (!Array.isArray(raw)) return [];
+  const out: Window[] = [];
+  for (const entry of raw) {
+    const rec = asRecord(entry);
+    if (!rec) continue;
+    const limitId = String(firstDefined(rec, ["meteredFeature", "metered_feature"]) ?? "").trim();
+    if (!limitId || limitId === "codex") continue;
+    const label = String(firstDefined(rec, ["limitName", "limit_name"]) ?? "").trim() || limitId;
+    const rateLimit = mergeRateLimit(rec.rateLimit, rec.rate_limit);
+    const extra = { label, minor };
+    const primary = normalizeWindow(pickWindow(rateLimit, ["primaryWindow", "primary_window", "primary"]), "5h", now, extra);
+    const secondary = normalizeWindow(
+      pickWindow(rateLimit, ["secondaryWindow", "secondary_window", "secondary"]),
+      "weekly",
+      now,
+      extra,
+    );
+    if (primary) out.push(primary);
+    if (secondary) out.push(secondary);
+  }
+  return out;
+}
+
+function unwrapUsage(json: unknown): Record<string, unknown> {
+  const rec = asRecord(json);
+  if (!rec) return {};
+  if (rec.rateLimit || rec.rate_limit || rec.additionalRateLimits || rec.additional_rate_limits) return rec;
+  const nested = asRecord(rec.data);
+  return nested ?? rec;
 }
 
 async function callUsage(
@@ -173,21 +252,14 @@ export const codexAdapter: Adapter = {
       }
     }
 
-    const usage = (await fetchUsageWithRefresh()) as {
-      rateLimit?: Record<string, unknown>;
-      rate_limit?: Record<string, unknown>;
-      planType?: unknown;
-      plan_type?: unknown;
-    };
-
-    const rateLimit = { ...(usage?.rateLimit ?? {}), ...(usage?.rate_limit ?? {}) } as Record<string, unknown>;
-    const primary = normalizeWindow(rateLimit.primaryWindow as CodexWindowRaw | undefined, "5h");
-    const secondary = normalizeWindow(rateLimit.secondaryWindow as CodexWindowRaw | undefined, "weekly");
-    const windows = [primary, secondary].filter((w): w is Window => w !== null);
+    const usage = unwrapUsage(await fetchUsageWithRefresh());
+    const official = officialWindows(mergeRateLimit(usage.rateLimit, usage.rate_limit), ctx.now());
+    const extras = additionalWindows(usage, ctx.now(), official.length > 0);
+    const windows = [...official, ...extras];
     if (windows.length === 0) throw new Error("Codex: wham/usage response has no usable windows");
     return {
       windows,
-      meta: { planType: usage?.planType ?? usage?.plan_type ?? null },
+      meta: { planType: usage.planType ?? usage.plan_type ?? null },
     };
   },
 };

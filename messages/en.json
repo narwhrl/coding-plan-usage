@@ -77,6 +77,9 @@
     "premium": "Premium requests",
     "chat": "Chat",
     "lifetime": "Lifetime credits",
+    "cursor_models": "Cursor Models",
+    "other_models": "Other Models",
+    "grok_bot": "Grok Bot",
     "withCurrency": "{name} ({currency})"
   },
   "unit": {
@@ -175,6 +178,16 @@
       "baseUrl": "API base URL",
       "displayCurrency": "Display currency",
       "displayCurrencyHint": "Official balance may include both CNY and USD. The card shows the selected one, and falls back if that currency is missing.",
+      "proxy": "Proxy",
+      "proxyHint": "Optional. http://, https://, or socks5://; username and password are allowed.",
+      "proxyEditHint": "Leave empty to remove. The password is not shown; saving the same address keeps it.",
+      "proxyPlaceholder": "http://127.0.0.1:7890",
+      "proxyError": {
+        "invalid_url": "Proxy is not a valid URL",
+        "unsupported_protocol": "Only http, https, and socks5 are supported",
+        "missing_host": "Proxy URL is missing a host",
+        "invalid_port": "Proxy port is invalid"
+      },
       "save": "Save",
       "saving": "Saving…",
       "saved": "Account added",

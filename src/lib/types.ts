@@ -37,6 +37,8 @@ export type AccountConfig = {
   baseUrl?: string;
   /** DeepSeek 等多币种余额：卡片/详情只展示选中的币种。 */
   displayCurrency?: DisplayCurrency;
+  /** 脱敏后的代理 URL（不含密码）。采集走该账户的 HTTP(S)/SOCKS5 代理。 */
+  proxyUrl?: string;
   /** 种子演示账户标记：手动刷新跳过真实采集（仅脚本写入，API schema 剥离该键）。 */
   demo?: boolean;
 };

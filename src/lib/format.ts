@@ -164,6 +164,9 @@ const WINDOW_LABEL_ALIASES: Record<string, string> = {
   "topped up": "window.topped_up",
   "premium requests": "window.premium",
   chat: "window.chat",
+  "cursor models": "window.cursor_models",
+  "other models": "window.other_models",
+  "grok bot": "window.grok_bot",
 };
 
 /** 同 kind 多条时 label 才是区分信息（模型名），不能被 kind 词条盖掉。 */
@@ -190,7 +193,7 @@ function withCurrency(name: string, currency: string, t: Translate): string {
  * 只有模型名这类无法用 kind 表达的 label 才原样显示。
  * 自定义提供商的 kind 不在词条表里，所以必须走 t.has 判断，不能直接 t()。
  */
-export function windowName(w: Pick<Window, "kind" | "label">, t: Translate): string {
+export function windowName(w: Pick<Window, "kind" | "label" | "minor">, t: Translate): string {
   const kindKey = `window.${w.kind}`;
   const hasKind = Boolean(t.has?.(kindKey));
 
@@ -205,7 +208,8 @@ export function windowName(w: Pick<Window, "kind" | "label">, t: Translate): str
     if (CURRENCY_CODE.test(w.label.trim()) && hasKind) {
       return withCurrency(t(kindKey), w.label.trim().toUpperCase(), t);
     }
-    if (DISTINCTIVE_LABEL_KINDS.has(w.kind)) return w.label;
+    // minor 车道的模型名（Codex Spark / MiniMax Hailuo）不能被 kind 词条盖掉。
+    if (DISTINCTIVE_LABEL_KINDS.has(w.kind) || w.minor) return w.label;
   }
 
   if (hasKind) return t(kindKey);

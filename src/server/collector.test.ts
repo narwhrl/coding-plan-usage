@@ -5,6 +5,7 @@ import { bootstrapProviders } from "./bootstrap";
 import { pollAccount } from "./collector";
 import { accounts, providers, settings, snapshots } from "./db/schema";
 import { eq } from "drizzle-orm";
+import { applyProxyUrl } from "./account-config";
 import { encryptSecret } from "./crypto";
 import { DeclarativeSpecSchema } from "./adapters/declarative";
 import { patchNotifySettings } from "./settings";
@@ -170,6 +171,18 @@ describe("collector", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("redacts a proxy password in the error snapshot", async () => {
+    const applied = applyProxyUrl({}, "http://user:s3cret-pass@127.0.0.1:9");
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    const id = makeAccount({ config: JSON.stringify(applied.stored) });
+    await expect(pollAccount(id)).rejects.toThrow();
+    const db = getDb();
+    const snap = db.select().from(snapshots).where(eq(snapshots.accountId, id)).get();
+    expect(snap?.status).toBe("error");
+    expect(snap?.error ?? "").not.toContain("s3cret-pass");
   });
 
   it("clears the failure counter after a success", async () => {
