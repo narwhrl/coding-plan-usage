@@ -250,5 +250,10 @@
   }
   html {
     @apply font-sans font-mono;
+    /*
+     * 经典滚动条会占掉一列宽度。短页没有滚动条、长页有，整栏会往左抽一下。
+     * 预留 gutter，内容宽度始终按「有滚动条」算，切页或打开弹层锁滚动都不再位移。
+     */
+    scrollbar-gutter: stable;
   }
 }
