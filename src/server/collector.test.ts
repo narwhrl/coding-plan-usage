@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { getDb, migrate, _resetForTest } from "./db";
 import { bootstrapProviders } from "./bootstrap";
-import { pollAccount, _resetConsecutiveErrorsForTest } from "./collector";
+import { pollAccount } from "./collector";
 import { accounts, providers, snapshots } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { encryptSecret } from "./crypto";
@@ -55,7 +55,6 @@ beforeEach(() => {
     })
     .onConflictDoUpdate({ target: providers.id, set: { declarativeSpec: JSON.stringify(SPEC) } })
     .run();
-  _resetConsecutiveErrorsForTest();
 });
 
 afterAll(() => {
@@ -123,6 +122,49 @@ describe("collector", () => {
       await expect(pollAccount(id)).rejects.toThrow();
       account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
       expect(account.nextFetchAt!).toBeGreaterThan(before + 5 * 60 * 60_000); // 退避 6h
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("persists the failure counter and last error time", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("err", { status: 503 })) as typeof fetch;
+    const id = makeAccount();
+    try {
+      await expect(pollAccount(id)).rejects.toThrow();
+      await expect(pollAccount(id)).rejects.toThrow();
+      await expect(pollAccount(id)).rejects.toThrow();
+      const db = getDb();
+      let account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(3);
+      expect(account.lastErrorAt).toBeTruthy();
+      const failedAt = account.lastErrorAt;
+
+      globalThis.fetch = (async () =>
+        new Response(JSON.stringify({ data: { total: 1, remaining: 1 } }), { status: 200 })) as typeof fetch;
+      await pollAccount(id);
+      account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(0);
+      // 成功不清空最后失败时间：设置页仍要能显示「上次何时坏过」。
+      expect(account.lastErrorAt).toBe(failedAt);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("backs off immediately when a restart left the counter at the threshold", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("err", { status: 503 })) as typeof fetch;
+    // 计数落库后，重启不再清零：残留 2 次时下一次失败就该直接进 6h 退避。
+    const id = makeAccount({ config: JSON.stringify({ intervalMinutes: 15 }), consecutiveFailures: 2 });
+    const before = Date.now();
+    try {
+      await expect(pollAccount(id)).rejects.toThrow();
+      const db = getDb();
+      const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(3);
+      expect(account.nextFetchAt!).toBeGreaterThan(before + 5 * 60 * 60_000);
     } finally {
       globalThis.fetch = originalFetch;
     }

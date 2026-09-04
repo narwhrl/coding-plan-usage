@@ -25,6 +25,8 @@ function mkAccount(overrides: Partial<AccountView> = {}): AccountView {
     enabled: true,
     config: {},
     nextFetchAt: null,
+    consecutiveFailures: 0,
+    lastErrorAt: null,
     createdAt: "2026-09-02T12:00:00Z",
     latestSnapshot: null,
     lastOkSnapshot: null,

@@ -42,6 +42,8 @@ describe("accountForDisplay", () => {
       enabled: true,
       config: { displayCurrency: "USD" },
       nextFetchAt: null,
+      consecutiveFailures: 0,
+      lastErrorAt: null,
       createdAt: "2026-09-03T00:00:00Z",
       latestSnapshot: {
         id: 1,

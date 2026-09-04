@@ -6,8 +6,7 @@ import { decryptSecret, encryptSecret } from "./crypto";
 import { getSettings } from "./settings";
 import type { Account } from "./db/schema";
 
-/** 连续错误计数（内存）。达 3 → 退避 6h；成功清零；手动强刷不消费退避但仍按结果重置计数。 */
-const consecutiveErrors = new Map<string, number>();
+/** 连续错误计数落在 accounts.consecutive_failures。达 3 → 退避 6h；成功清零；手动强刷不消费退避但仍按结果更新计数。 */
 const FAILURE_BACKOFF_THRESHOLD = 3;
 const FAILURE_BACKOFF_MS = 6 * 60 * 60 * 1000;
 
@@ -58,7 +57,14 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
         error: `credential decrypt failed: ${message}`,
       })
       .run();
-    db.update(accounts).set({ nextFetchAt: Date.now() + FAILURE_BACKOFF_MS }).where(eq(accounts.id, accountId)).run();
+    db.update(accounts)
+      .set({
+        nextFetchAt: Date.now() + FAILURE_BACKOFF_MS,
+        consecutiveFailures: account.consecutiveFailures + 1,
+        lastErrorAt: new Date().toISOString(),
+      })
+      .where(eq(accounts.id, accountId))
+      .run();
     throw error;
   }
 
@@ -106,10 +112,9 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
         raw: JSON.stringify({ meta: result.meta ?? null, responses: rawResult }),
       })
       .run();
-    consecutiveErrors.set(accountId, 0);
     const interval = await effectiveIntervalMinutes(account);
     db.update(accounts)
-      .set({ nextFetchAt: Date.now() + interval * 60_000 })
+      .set({ nextFetchAt: Date.now() + interval * 60_000, consecutiveFailures: 0 })
       .where(eq(accounts.id, accountId))
       .run();
   } catch (error) {
@@ -123,18 +128,15 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
         raw: rawResult ? JSON.stringify({ responses: rawResult }) : null,
       })
       .run();
-    const failures = (consecutiveErrors.get(accountId) ?? 0) + 1;
-    consecutiveErrors.set(accountId, failures);
+    const failures = account.consecutiveFailures + 1;
     const interval = await effectiveIntervalMinutes(account);
     // 手动强刷不消费退避（仍按结果更新计数），调度间隔按常规 interval 推进
     const delay =
       options.manual || failures < FAILURE_BACKOFF_THRESHOLD ? interval * 60_000 : FAILURE_BACKOFF_MS;
-    db.update(accounts).set({ nextFetchAt: Date.now() + delay }).where(eq(accounts.id, accountId)).run();
+    db.update(accounts)
+      .set({ nextFetchAt: Date.now() + delay, consecutiveFailures: failures, lastErrorAt: nowIso })
+      .where(eq(accounts.id, accountId))
+      .run();
     throw error;
   }
-}
-
-/** 测试用：清空连续错误计数。 */
-export function _resetConsecutiveErrorsForTest(): void {
-  consecutiveErrors.clear();
 }

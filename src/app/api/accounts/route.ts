@@ -100,6 +100,8 @@ export async function GET(): Promise<NextResponse> {
       enabled: account.enabled === 1,
       config,
       nextFetchAt: account.nextFetchAt,
+      consecutiveFailures: account.consecutiveFailures,
+      lastErrorAt: account.lastErrorAt,
       createdAt: account.createdAt,
       latestSnapshot: latest ? serializeSnapshot(latest) : null,
       lastOkSnapshot: lastOk ? serializeSnapshot(lastOk) : null,

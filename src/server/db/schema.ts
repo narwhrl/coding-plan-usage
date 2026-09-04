@@ -35,6 +35,14 @@ export const accounts = sqliteTable(
     enabled: integer("enabled").notNull().default(1),
     /** ms epoch；null 视为立即到期 */
     nextFetchAt: integer("next_fetch_at"),
+    /** 连续采集失败次数；成功归零。进程重启后仍生效，用于 6h 退避与设置页展示。 */
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    /** 最近一次采集失败时刻（ISO UTC）；成功后不清空，仅用于展示。 */
+    lastErrorAt: text("last_error_at"),
+    /** 告警状态机上一次判定的电平：'ok' | 'low' | 'error'；null = 尚未判定过。 */
+    alertLevel: text("alert_level"),
+    /** 上次就该电平推送成功的时刻（ISO UTC），用于最小重复间隔抑制。 */
+    alertNotifiedAt: text("alert_notified_at"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull(),
   },

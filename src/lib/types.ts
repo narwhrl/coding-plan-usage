@@ -51,6 +51,10 @@ export type AccountView = {
   enabled: boolean;
   config: AccountConfig;
   nextFetchAt: number | null;
+  /** 连续采集失败次数（落库，进程重启后仍有效）。 */
+  consecutiveFailures: number;
+  /** 最近一次采集失败时刻（ISO UTC）；成功后不清空。 */
+  lastErrorAt: string | null;
   createdAt: string;
   latestSnapshot: SnapshotView | null;
   lastOkSnapshot: SnapshotView | null;

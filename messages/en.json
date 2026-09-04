@@ -99,6 +99,7 @@
     "values": "Values",
     "statusOk": "OK",
     "statusError": "Error",
+    "consecutiveFailures": "{count} consecutive failures",
     "raw": "Raw response",
     "edit": "Edit",
     "refresh": "Refresh now",

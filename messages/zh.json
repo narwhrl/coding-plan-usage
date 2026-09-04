@@ -99,6 +99,7 @@
     "values": "数值",
     "statusOk": "成功",
     "statusError": "失败",
+    "consecutiveFailures": "已连续失败 {count} 次",
     "raw": "原始响应",
     "edit": "编辑",
     "refresh": "立即刷新",
