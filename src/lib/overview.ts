@@ -73,7 +73,11 @@ export type OverviewKpis = {
   tightest: { account: AccountView; window: Window } | null;
   /** enabled 账户展示窗口中未来最近的一次重置；error 账户不参与 tightest，但经展示快照参与 nextReset。 */
   nextReset: { account: AccountView; window: Window } | null;
-  /** enabled 且非 error 的账户中预计最先耗尽的那个（at 为 ISO 时刻）。 */
+  /**
+   * enabled 且非 error 的账户中预计最先耗尽的那个（at 为 ISO 时刻）。
+   * 会在重置前先回满的账户不计入：那种"耗尽时刻"不会真的到来，
+   * 和账户卡的同一条判断保持一致，两处不能一个说得出一个说不出。
+   */
   firstExhaust: { account: AccountView; at: string } | null;
 };
 
@@ -95,7 +99,7 @@ export function overviewKpis(accounts: AccountView[]): OverviewKpis {
   for (const account of enabled) {
     const errored = account.latestSnapshot?.status === "error";
     if (errored) kpis.errorCount += 1;
-    const exhaustsAt = account.burn?.exhaustsAt;
+    const exhaustsAt = account.burn?.beforeReset === false ? undefined : account.burn?.exhaustsAt;
     if (!errored && exhaustsAt) {
       const exhaustMs = Date.parse(exhaustsAt);
       if (Number.isFinite(exhaustMs) && exhaustMs < firstExhaustMs) {

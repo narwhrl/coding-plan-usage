@@ -103,6 +103,7 @@
     "statusError": "失败",
     "consecutiveFailures": "已连续失败 {count} 次",
     "burnRate": "近 24 小时约 {rate} 个百分点/小时 · 预计 {time}用完",
+    "burnRateResets": "近 24 小时约 {rate} 个百分点/小时 · 重置前用不完",
     "burnStable": "近 24 小时无明显消耗",
     "raw": "原始响应",
     "edit": "编辑",

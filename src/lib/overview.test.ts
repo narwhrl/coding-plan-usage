@@ -41,14 +41,14 @@ function window(remainingPct?: number, resetAt?: string): Window {
   return { kind: "daily", unit: "percent", remainingPct, resetAt };
 }
 
-function burn(exhaustsAt: string | null): BurnRate {
+function burn(exhaustsAt: string | null, beforeReset: boolean | null = null): BurnRate {
   return {
     pctPerHour: exhaustsAt ? 5 : 0,
     currentPct: 50,
     samples: 5,
     spanMs: 86_400_000,
     exhaustsAt,
-    beforeReset: null,
+    beforeReset,
   };
 }
 
@@ -187,6 +187,20 @@ describe("overviewKpis", () => {
   it("ignores accounts whose burn rate carries no projection", () => {
     const account = mkAccount({ latestSnapshot: snap([window(80)]), burn: burn(null) });
     expect(overviewKpis([account]).firstExhaust).toBeNull();
+  });
+
+  it("ignores accounts that refill before they would run out", () => {
+    // beforeReset=false 时那个耗尽时刻不会到来，卡片也不显示它，KPI 不能自己说一套。
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+    const resetsFirst = mkAccount({ id: "resets", latestSnapshot: snap([window(40)]), burn: burn(at, false) });
+    const willRunOut = mkAccount({
+      id: "runs-out",
+      latestSnapshot: snap([window(40)]),
+      burn: burn(new Date(Date.now() + 10 * 3_600_000).toISOString(), true),
+    });
+
+    expect(overviewKpis([resetsFirst]).firstExhaust).toBeNull();
+    expect(overviewKpis([resetsFirst, willRunOut]).firstExhaust?.account.id).toBe("runs-out");
   });
 });
 

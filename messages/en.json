@@ -103,6 +103,7 @@
     "statusError": "Error",
     "consecutiveFailures": "{count} consecutive failures",
     "burnRate": "Last 24h: {rate} pts/hour · runs out {time}",
+    "burnRateResets": "Last 24h: {rate} pts/hour · resets before running out",
     "burnStable": "No measurable usage in the last 24h",
     "raw": "Raw response",
     "edit": "Edit",
