@@ -5,6 +5,9 @@ import { isoOrNull, numberOrNull, pctWindow, type Adapter, type AdapterResult, t
  * GET https://cursor.com/api/usage-summary（Cookie: WorkosCursorSessionToken=<用户粘贴值>）。
  * POST https://cursor.com/api/dashboard/get-sand-usage-status 取 Grok Bot（best-effort）。
  * GET https://cursor.com/api/auth/me 取套餐/账号名（best-effort）。
+ * 用量明细（GLM 同款 meta.modelUsage，失败不阻断主窗口）：
+ *   POST /api/dashboard/get-filtered-usage-events 按小时桶（近 7 个本地自然日）
+ *   POST /api/dashboard/get-aggregated-usage-events 按模型汇总（有则覆盖事件聚合）
  * 解析规范：token-monitor cursorProbe.js + limitCollector.js fetchCursorAccountLimits（MIT）。
  * Spending 页三栏：Cursor Models = autoPercentUsed，Other Models = apiPercentUsed，
  * Grok Bot = sand usagePercent。金额 used/limit 经常是 0/0 或已用满，不能当主窗口。
@@ -13,6 +16,10 @@ import { isoOrNull, numberOrNull, pctWindow, type Adapter, type AdapterResult, t
 const USAGE_URL = "https://cursor.com/api/usage-summary";
 const AUTH_ME_URL = "https://cursor.com/api/auth/me";
 const SAND_USAGE_URL = "https://cursor.com/api/dashboard/get-sand-usage-status";
+const EVENTS_URL = "https://cursor.com/api/dashboard/get-filtered-usage-events";
+const AGGREGATED_URL = "https://cursor.com/api/dashboard/get-aggregated-usage-events";
+const MODEL_USAGE_PAGE_SIZE = 100;
+const MODEL_USAGE_MAX_PAGES = 50;
 
 type Moneyish = { used?: unknown; limit?: unknown; remaining?: unknown } | undefined;
 
@@ -82,6 +89,151 @@ async function readJson(res: Response): Promise<unknown> {
   } catch {
     return null;
   }
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** 本地小时桶，和 GLM x_time 一样："YYYY-MM-DD HH:00"。 */
+function localHourLabel(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:00`;
+}
+
+function eventTokens(event: Record<string, unknown>): number {
+  const usage = asRecord(event.tokenUsage) ?? event;
+  return (
+    (numberOrNull(usage.inputTokens) ?? 0) +
+    (numberOrNull(usage.outputTokens) ?? 0) +
+    (numberOrNull(usage.cacheWriteTokens) ?? 0) +
+    (numberOrNull(usage.cacheReadTokens) ?? 0)
+  );
+}
+
+function addModelTokens(target: Map<string, number>, name: unknown, tokens: number): void {
+  const model = typeof name === "string" ? name.trim() : "";
+  if (!model) return;
+  target.set(model, (target.get(model) ?? 0) + tokens);
+}
+
+/** 看板用 usageEventsDisplay；官方 Admin API 同形字段是 usageEvents。 */
+function usageEventsFrom(body: Record<string, unknown> | null): unknown[] {
+  if (Array.isArray(body?.usageEventsDisplay)) return body.usageEventsDisplay;
+  if (Array.isArray(body?.usageEvents)) return body.usageEvents;
+  return [];
+}
+
+/** 近 7 个本地自然日（与 GLM model-usage 同一窗口），收成 UsageCard 能吃的 modelUsage。 */
+async function fetchCursorModelUsage(
+  fetchFn: typeof fetch,
+  sessionToken: string,
+  now: Date,
+  userId?: number,
+): Promise<Record<string, unknown> | null> {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  const headers = sessionHeaders(sessionToken, {
+    "content-type": "application/json",
+    Origin: "https://cursor.com",
+  });
+  const range: Record<string, unknown> = {
+    teamId: 0,
+    startDate: String(startMs),
+    endDate: String(endMs),
+  };
+  if (userId !== undefined) range.userId = userId;
+
+  const hours: string[] = [];
+  for (let stamp = startMs; stamp <= endMs; stamp += 3_600_000) {
+    hours.push(localHourLabel(new Date(stamp)));
+  }
+  const tokensByHour = new Map<string, number>();
+  const callsByHour = new Map<string, number>();
+  const tokensByModel = new Map<string, number>();
+  let sawEvent = false;
+
+  for (let page = 1; page <= MODEL_USAGE_MAX_PAGES; page++) {
+    let body: Record<string, unknown> | null = null;
+    try {
+      const res = await fetchFn(EVENTS_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ...range, page, pageSize: MODEL_USAGE_PAGE_SIZE }),
+      });
+      if (!res.ok) break;
+      body = asRecord(await readJson(res));
+    } catch {
+      break;
+    }
+    const events = usageEventsFrom(body);
+    if (events.length === 0) break;
+    sawEvent = true;
+    for (const item of events) {
+      const rec = asRecord(item);
+      if (!rec) continue;
+      const stamp = numberOrNull(rec.timestamp);
+      if (stamp === null || stamp < startMs || stamp > endMs) continue;
+      const hour = localHourLabel(new Date(stamp));
+      const tokens = eventTokens(rec);
+      tokensByHour.set(hour, (tokensByHour.get(hour) ?? 0) + tokens);
+      callsByHour.set(hour, (callsByHour.get(hour) ?? 0) + 1);
+      addModelTokens(tokensByModel, rec.model, tokens);
+    }
+    const total = numberOrNull(body?.totalUsageEventsCount);
+    if (events.length < MODEL_USAGE_PAGE_SIZE) break;
+    if (total !== null && page * MODEL_USAGE_PAGE_SIZE >= total) break;
+  }
+
+  try {
+    const res = await fetchFn(AGGREGATED_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(range),
+    });
+    if (res.ok) {
+      const agg = asRecord(await readJson(res));
+      const rows = Array.isArray(agg?.aggregations) ? agg.aggregations : [];
+      if (rows.length > 0) {
+        tokensByModel.clear();
+        for (const item of rows) {
+          const rec = asRecord(item);
+          if (!rec) continue;
+          addModelTokens(
+            tokensByModel,
+            rec.modelIntent ?? rec.model,
+            eventTokens(rec),
+          );
+        }
+      }
+    }
+  } catch {
+    /* 按模型汇总失败则保留事件聚合 */
+  }
+
+  if (!sawEvent && tokensByModel.size === 0) return null;
+
+  const tokensUsage = hours.map((hour) => tokensByHour.get(hour) ?? 0);
+  const modelCallCount = hours.map((hour) => callsByHour.get(hour) ?? 0);
+  if (!sawEvent && tokensByModel.size > 0 && hours[0]) {
+    tokensUsage[0] = [...tokensByModel.values()].reduce((sum, tokens) => sum + tokens, 0);
+  }
+  const totalTokensUsage = tokensUsage.reduce((sum, tokens) => sum + tokens, 0);
+  const totalModelCallCount = modelCallCount.reduce((sum, calls) => sum + calls, 0);
+  if (totalTokensUsage === 0 && totalModelCallCount === 0 && tokensByModel.size === 0) return null;
+
+  const modelDataList = [...tokensByModel.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([modelName, totalTokens]) => ({ modelName, totalTokens }));
+
+  return {
+    x_time: hours,
+    tokensUsage,
+    modelCallCount,
+    totalUsage: { totalTokensUsage, totalModelCallCount },
+    modelDataList,
+  };
 }
 
 export const cursorAdapter: Adapter = {
@@ -154,14 +306,24 @@ export const cursorAdapter: Adapter = {
     if (windows.length === 0) throw new Error("Cursor: usage-summary has no usable quota numbers");
 
     const meta: Record<string, unknown> = {};
+    let userId: number | undefined;
     if (meRes?.ok) {
       const me = asRecord(await readJson(meRes));
       if (me) {
         meta.email = typeof me.email === "string" ? me.email : null;
         meta.name = typeof me.name === "string" ? me.name : null;
+        const id = numberOrNull(me.id);
+        if (id !== null) userId = id;
       }
     }
     if (typeof summary.membershipType === "string") meta.membershipType = summary.membershipType;
+
+    try {
+      const modelUsage = await fetchCursorModelUsage(ctx.fetchFn, sessionToken, ctx.now(), userId);
+      if (modelUsage) meta.modelUsage = modelUsage;
+    } catch {
+      /* best-effort */
+    }
 
     return { windows, meta };
   },
