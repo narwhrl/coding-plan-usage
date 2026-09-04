@@ -10,6 +10,7 @@ const allowedDevOrigins = Object.values(networkInterfaces()).flatMap((addresses)
 const nextConfig: NextConfig = {
   allowedDevOrigins,
   output: "standalone",
+  serverExternalPackages: ["undici"],
 };
 
 export default withNextIntl(nextConfig);

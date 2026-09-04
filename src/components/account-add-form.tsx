@@ -17,6 +17,7 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "@/c
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { DisplayCurrencyField } from "@/components/display-currency-field";
+import { isProxyUrlInputValid, ProxyUrlField } from "@/components/proxy-url-field";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import type { DisplayCurrency, ProviderView } from "@/lib/types";
 import { fieldLabel, fieldPlaceholder, regionName } from "@/lib/format";
@@ -31,6 +32,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
   const [warnPct, setWarnPct] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("CNY");
+  const [proxyUrl, setProxyUrl] = useState("");
   const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
             ...(warnPct.trim() ? { warnPct: Number(warnPct) } : {}),
             ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
             ...(provider.displayCurrencies?.length ? { displayCurrency } : {}),
+            ...(proxyUrl.trim() ? { proxyUrl: proxyUrl.trim() } : {}),
           },
         }),
       });
@@ -68,6 +71,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
       setWarnPct("");
       setBaseUrl("");
       setDisplayCurrency("CNY");
+      setProxyUrl("");
       setCredentialValues({});
       onSaved();
     } catch (e) {
@@ -182,6 +186,8 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
           />
         ) : null}
 
+        <ProxyUrlField id="add-proxy" value={proxyUrl} onValueChange={setProxyUrl} />
+
         <Separator />
 
         <div className="grid grid-cols-2 gap-4">
@@ -237,7 +243,7 @@ export function AccountAddForm({ providers, onSaved }: { providers: ProviderView
         <Button
           onClick={save}
           loading={busy}
-          disabled={!provider}
+          disabled={!provider || !isProxyUrlInputValid(proxyUrl)}
           className="justify-self-start"
           data-testid="account-save"
         >

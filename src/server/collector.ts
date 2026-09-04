@@ -1,8 +1,11 @@
 import { eq } from "drizzle-orm";
+import { redactProxySecrets } from "@/lib/proxy";
 import { getDb } from "./db";
 import { accounts, providers, snapshots } from "./db/schema";
 import { getAdapter } from "./adapters/registry";
+import { decryptStoredProxy, parseStoredConfig, type StoredAccountConfig } from "./account-config";
 import { decryptSecret, encryptSecret } from "./crypto";
+import { createAccountFetch } from "./proxy-fetch";
 import { getSettings } from "./settings";
 import type { Account } from "./db/schema";
 
@@ -11,15 +14,8 @@ const consecutiveErrors = new Map<string, number>();
 const FAILURE_BACKOFF_THRESHOLD = 3;
 const FAILURE_BACKOFF_MS = 6 * 60 * 60 * 1000;
 
-type AccountConfig = { intervalMinutes?: number; warnPct?: number; baseUrl?: string };
-
-export function parseAccountConfig(account: Account): AccountConfig {
-  try {
-    const parsed = JSON.parse(account.config) as AccountConfig;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+export function parseAccountConfig(account: Account): StoredAccountConfig {
+  return parseStoredConfig(account.config);
 }
 
 export async function effectiveIntervalMinutes(account: Account): Promise<number> {
@@ -63,6 +59,24 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
   }
 
   const config = parseAccountConfig(account);
+  let proxy;
+  try {
+    proxy = decryptStoredProxy(config.proxyCipher);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    db.insert(snapshots)
+      .values({
+        accountId,
+        fetchedAt: new Date().toISOString(),
+        status: "error",
+        error: `proxy decrypt failed: ${message}`.slice(0, 2000),
+      })
+      .run();
+    db.update(accounts).set({ nextFetchAt: Date.now() + FAILURE_BACKOFF_MS }).where(eq(accounts.id, accountId)).run();
+    throw error;
+  }
+
+  const { fetchFn, close } = createAccountFetch(proxy);
   const nowIso = new Date().toISOString();
   let rawResult: unknown = null;
 
@@ -71,7 +85,7 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
       credentials,
       config: { baseUrl: config.baseUrl },
       fetchFn: async (input, init) => {
-        const response = await fetch(input, init);
+        const response = await fetchFn(input, init);
         // raw 记录原始响应 JSON 便于排障（克隆读 body 不影响 adapter 自身读取）
         try {
           const clone = response.clone();
@@ -113,7 +127,7 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
       .where(eq(accounts.id, accountId))
       .run();
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = redactProxySecrets(error instanceof Error ? error.message : String(error), proxy);
     db.insert(snapshots)
       .values({
         accountId,
@@ -131,6 +145,8 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
       options.manual || failures < FAILURE_BACKOFF_THRESHOLD ? interval * 60_000 : FAILURE_BACKOFF_MS;
     db.update(accounts).set({ nextFetchAt: Date.now() + delay }).where(eq(accounts.id, accountId)).run();
     throw error;
+  } finally {
+    await close();
   }
 }
 

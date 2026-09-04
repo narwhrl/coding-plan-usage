@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DisplayCurrencyField } from "@/components/display-currency-field";
+import { isProxyUrlInputValid, ProxyUrlField } from "@/components/proxy-url-field";
 import type { AccountView, CredentialFieldView, DisplayCurrency } from "@/lib/types";
 import { parseDisplayCurrency } from "@/lib/display-currency";
 import { fieldLabel, fieldPlaceholder } from "@/lib/format";
@@ -54,11 +55,14 @@ export function EditAccountDialog({
     parseDisplayCurrency(account.config.displayCurrency) ?? "CNY",
   );
   const [enabled, setEnabled] = useState(account.enabled);
+  const [proxyUrl, setProxyUrl] = useState(account.config.proxyUrl ?? "");
   const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
     setBusy(true);
+    setError(null);
     try {
       const body: Record<string, unknown> = {
         label,
@@ -68,6 +72,7 @@ export function EditAccountDialog({
           ...(warnPct.trim() ? { warnPct: Number(warnPct) } : {}),
           ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
           ...(displayCurrencies && displayCurrencies.length > 0 ? { displayCurrency } : {}),
+          proxyUrl: proxyUrl.trim(),
         },
       };
       const filled = Object.fromEntries(
@@ -76,13 +81,19 @@ export function EditAccountDialog({
       if (Object.keys(filled).length > 0) {
         body.credentials = filled;
       }
-      await fetch(`/api/accounts/${account.id}`, {
+      const response = await fetch(`/api/accounts/${account.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `HTTP ${response.status}`);
+      }
       onOpenChange(false);
       onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -139,6 +150,7 @@ export function EditAccountDialog({
                 <FieldLabel htmlFor="edit-baseurl">{t("baseUrl")}</FieldLabel>
                 <Input id="edit-baseurl" value={baseUrl} onValueChange={setBaseUrl} placeholder="https://" />
               </Field>
+              <ProxyUrlField id="edit-proxy" value={proxyUrl} onValueChange={setProxyUrl} variant="edit" />
               {displayCurrencies && displayCurrencies.length > 0 ? (
                 <DisplayCurrencyField
                   id="edit-currency"
@@ -183,10 +195,11 @@ export function EditAccountDialog({
                   )}
                 </Field>
               ))}
+              {error ? <p className="text-sm text-destructive-foreground">{error}</p> : null}
             </DialogPanel>
             <DialogFooter>
               <DialogClose>{t("cancel")}</DialogClose>
-              <Button onClick={save} loading={busy}>
+              <Button onClick={save} loading={busy} disabled={!isProxyUrlInputValid(proxyUrl)}>
                 {t("save")}
               </Button>
             </DialogFooter>

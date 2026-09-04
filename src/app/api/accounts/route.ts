@@ -9,7 +9,13 @@ import { ensureBootstrapped } from "@/server/bootstrap";
 import { encryptSecret } from "@/server/crypto";
 import { getSettings } from "@/server/settings";
 import { adapterBilling, getAdapter } from "@/server/adapters/registry";
-import { parseDisplayCurrency } from "@/lib/display-currency";
+import {
+  AccountConfigInputSchema,
+  mergeAccountConfig,
+  parseStoredConfig,
+  serializeStoredConfig,
+  toPublicConfig,
+} from "@/server/account-config";
 import { dailyTightestSeries, parseWindows } from "@/server/spark";
 
 /**
@@ -68,22 +74,7 @@ export async function GET(): Promise<NextResponse> {
       .limit(1)
       .get();
 
-    let config: {
-      intervalMinutes?: number;
-      warnPct?: number;
-      baseUrl?: string;
-      displayCurrency?: "CNY" | "USD";
-      demo?: boolean;
-    } = {};
-    try {
-      const parsed = JSON.parse(account.config) as typeof config;
-      config = parsed && typeof parsed === "object" ? parsed : {};
-      const displayCurrency = parseDisplayCurrency(config.displayCurrency);
-      if (displayCurrency) config.displayCurrency = displayCurrency;
-      else delete config.displayCurrency;
-    } catch {
-      /* ignore */
-    }
+    const config = toPublicConfig(parseStoredConfig(account.config));
     const warnThreshold = config.warnPct ?? settings.warnPct;
     const warnWindows = (lastOk ? parseWindows(lastOk.windows) : []).filter(
       (w) => !w.minor && typeof w.remainingPct === "number" && w.remainingPct < warnThreshold,
@@ -164,14 +155,7 @@ const CreateAccountSchema = z.object({
   providerId: z.string().min(1),
   label: z.string().min(1).max(100),
   credentials: z.record(z.string(), z.string()),
-  config: z
-    .object({
-      intervalMinutes: z.number().int().positive().optional(),
-      warnPct: z.number().int().min(0).max(100).optional(),
-      baseUrl: z.string().optional(),
-      displayCurrency: z.enum(["CNY", "USD"]).optional(),
-    })
-    .optional(),
+  config: AccountConfigInputSchema.optional(),
 });
 
 /** POST /api/accounts {providerId, label, credentials, config?}（credentials 加密入库）。 */
@@ -200,6 +184,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  const merged = mergeAccountConfig("{}", parsed.data.config);
+  if (!merged.ok) {
+    return NextResponse.json({ error: `invalid proxy: ${merged.error}` }, { status: 400 });
+  }
+
   const id = randomUUID();
   const count = db.select().from(accounts).all().length;
   db.insert(accounts)
@@ -208,7 +197,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       providerId: parsed.data.providerId,
       label: parsed.data.label,
       credentialsCipher: encryptSecret(JSON.stringify(parsed.data.credentials)),
-      config: JSON.stringify(parsed.data.config ?? {}),
+      config: serializeStoredConfig(merged.stored),
       enabled: 1,
       nextFetchAt: null, // 立即采集
       sortOrder: count,
