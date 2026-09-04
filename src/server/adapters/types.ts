@@ -2,7 +2,7 @@
 
 /** 快照 windows JSON 元素统一形状（与 src/server/db/schema.ts 注释同步）。 */
 export type Window = {
-  /** '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'session'|'daily'|'billing'|'mcp'|'premium'|'chat'|'lifetime'|string */
+  /** '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'session'|'daily'|'billing'|'mcp'|'premium'|'chat'|'lifetime'|'cursor_models'|'other_models'|'grok_bot'|string */
   kind: string;
   label?: string;
   used?: number;

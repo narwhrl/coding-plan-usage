@@ -152,6 +152,9 @@ describe("windowName / unitName", () => {
     "window.premium",
     "window.chat",
     "window.balance",
+    "window.cursor_models",
+    "window.other_models",
+    "window.grok_bot",
     "window.withCurrency",
     "unit.tokens",
   ]);
@@ -163,6 +166,9 @@ describe("windowName / unitName", () => {
     expect(windowName({ kind: "credits", label: "Weekly" }, t)).toBe("window.weekly");
     expect(windowName({ kind: "5h" }, t)).toBe("window.5h");
     expect(windowName({ kind: "mcp" }, t)).toBe("window.mcp");
+    expect(windowName({ kind: "cursor_models", label: "Cursor Models" }, t)).toBe("window.cursor_models");
+    expect(windowName({ kind: "other_models", label: "Other Models" }, t)).toBe("window.other_models");
+    expect(windowName({ kind: "grok_bot", label: "Grok Bot" }, t)).toBe("window.grok_bot");
     expect(windowName({ kind: "custom-bucket" }, t)).toBe("custom-bucket");
   });
 

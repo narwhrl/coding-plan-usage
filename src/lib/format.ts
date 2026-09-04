@@ -164,6 +164,9 @@ const WINDOW_LABEL_ALIASES: Record<string, string> = {
   "topped up": "window.topped_up",
   "premium requests": "window.premium",
   chat: "window.chat",
+  "cursor models": "window.cursor_models",
+  "other models": "window.other_models",
+  "grok bot": "window.grok_bot",
 };
 
 /** 同 kind 多条时 label 才是区分信息（模型名），不能被 kind 词条盖掉。 */

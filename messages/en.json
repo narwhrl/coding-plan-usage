@@ -75,6 +75,9 @@
     "premium": "Premium requests",
     "chat": "Chat",
     "lifetime": "Lifetime credits",
+    "cursor_models": "Cursor Models",
+    "other_models": "Other Models",
+    "grok_bot": "Grok Bot",
     "withCurrency": "{name} ({currency})"
   },
   "unit": {

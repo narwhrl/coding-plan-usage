@@ -75,6 +75,9 @@
     "premium": "高级请求",
     "chat": "对话",
     "lifetime": "累计额度",
+    "cursor_models": "Cursor 模型",
+    "other_models": "其他模型",
+    "grok_bot": "Grok Bot",
     "withCurrency": "{name}（{currency}）"
   },
   "unit": {
