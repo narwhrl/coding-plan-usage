@@ -250,5 +250,11 @@
   }
   html {
     @apply font-sans font-mono;
+    /*
+     * 经典滚动条（Windows / Linux）会占掉一列宽度。短页没有滚动条、长页有，
+     * 整栏会往左抽一下。预留 gutter，内容宽度始终按「有滚动条」算。
+     * overlay 滚动条（macOS 默认）本身不占位，这条声明也不会多挤出空白。
+     */
+    scrollbar-gutter: stable;
   }
 }
