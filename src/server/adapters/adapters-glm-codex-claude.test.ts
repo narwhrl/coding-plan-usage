@@ -220,6 +220,163 @@ describe("codex adapter", () => {
     expect(written.tokens.access_token).toBe("new-at");
     expect(written.tokens.refresh_token).toBe("rt-2");
   });
+
+  it("parses the live snake_case wham/usage payload (rate_limit.primary_window + reset_at)", async () => {
+    const fetchFn = routeFetch({
+      "https://chatgpt.com/backend-api/wham/usage": () =>
+        new Response(
+          JSON.stringify({
+            plan_type: "plus",
+            rate_limit: {
+              allowed: true,
+              limit_reached: false,
+              primary_window: {
+                used_percent: 34,
+                limit_window_seconds: 18000,
+                reset_after_seconds: 5865,
+                reset_at: 1778091218,
+              },
+              secondary_window: {
+                used_percent: 37,
+                limit_window_seconds: 604800,
+                reset_after_seconds: 520217,
+                reset_at: 1778605571,
+              },
+            },
+            additional_rate_limits: [
+              {
+                limit_name: "GPT-5.3-Codex-Spark",
+                metered_feature: "codex_bengalfox",
+                rate_limit: {
+                  primary_window: {
+                    used_percent: 10,
+                    limit_window_seconds: 18000,
+                    reset_at: 1778103354,
+                  },
+                  secondary_window: {
+                    used_percent: 20,
+                    limit_window_seconds: 604800,
+                    reset_at: 1778605191,
+                  },
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+    });
+    expect(result.windows).toHaveLength(4);
+    expect(result.windows[0]).toMatchObject({
+      kind: "5h",
+      remainingPct: 66,
+      resetAt: new Date(1778091218 * 1000).toISOString(),
+    });
+    expect(result.windows[1]).toMatchObject({
+      kind: "weekly",
+      remainingPct: 63,
+      resetAt: new Date(1778605571 * 1000).toISOString(),
+    });
+    expect(result.windows[2]).toMatchObject({
+      kind: "5h",
+      label: "GPT-5.3-Codex-Spark",
+      remainingPct: 90,
+      minor: true,
+    });
+    expect(result.windows[3]).toMatchObject({
+      kind: "weekly",
+      label: "GPT-5.3-Codex-Spark",
+      remainingPct: 80,
+      minor: true,
+    });
+    expect(result.meta?.planType).toBe("plus");
+  });
+
+  it("labels a weekly-only primary_window as weekly, not 5h", async () => {
+    const fetchFn = routeFetch({
+      "https://chatgpt.com/backend-api/wham/usage": () =>
+        new Response(
+          JSON.stringify({
+            rate_limit: {
+              primary_window: { used_percent: 35, reset_at: 1770500000, limit_window_seconds: 604800 },
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+    });
+    expect(result.windows).toHaveLength(1);
+    expect(result.windows[0].kind).toBe("weekly");
+    expect(result.windows[0].remainingPct).toBe(65);
+    expect(result.windows[0].minor).toBeUndefined();
+  });
+
+  it("uses additional_rate_limits when rate_limit is empty so collection still succeeds", async () => {
+    const fetchFn = routeFetch({
+      "https://chatgpt.com/backend-api/wham/usage": () =>
+        new Response(
+          JSON.stringify({
+            plan_type: "pro",
+            rate_limit: null,
+            additional_rate_limits: [
+              {
+                limit_name: "Codex Other",
+                metered_feature: "codex_other",
+                rate_limit: {
+                  primary_window: { used_percent: 70, reset_at: 1770500000, limit_window_seconds: 604800 },
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+    });
+    expect(result.windows).toHaveLength(1);
+    expect(result.windows[0]).toMatchObject({
+      kind: "weekly",
+      label: "Codex Other",
+      remainingPct: 30,
+    });
+    expect(result.windows[0].minor).toBeUndefined();
+  });
+
+  it("derives resetAt from reset_after_seconds when reset_at is missing", async () => {
+    const fetchFn = routeFetch({
+      "https://chatgpt.com/backend-api/wham/usage": () =>
+        new Response(
+          JSON.stringify({
+            rate_limit: {
+              primary_window: { used_percent: 0, limit_window_seconds: 18000, reset_after_seconds: 3600 },
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+    });
+    expect(result.windows[0].remainingPct).toBe(100);
+    expect(result.windows[0].resetAt).toBe(new Date(Date.parse("2026-08-31T10:00:00Z")).toISOString());
+  });
 });
 
 describe("claude adapter", () => {
