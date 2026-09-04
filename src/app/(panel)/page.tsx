@@ -17,6 +17,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
 import { AccountCard } from "@/components/account-card";
 import { PageHeader } from "@/components/page-header";
 import { StatStrip, StatStripItem } from "@/components/stat-strip";
@@ -24,7 +25,6 @@ import type { AccountView, ProviderLane } from "@/lib/types";
 import { overviewKpis, sortAccountsByUrgency } from "@/lib/overview";
 import { accountForDisplay } from "@/lib/display-currency";
 import { countdownText, windowName } from "@/lib/format";
-import { SegmentedToggle } from "@/components/segmented-toggle";
 
 const LANE_KEY = "cpu_overview_lane";
 const LANE_EVENT = "cpu-overview-lane";
@@ -117,32 +117,13 @@ export default function OverviewPage() {
 
   const visible = accounts.filter((account) => (account.lane ?? "plan") === lane);
   const kpis = overviewKpis(visible);
-  const sorted = sortAccountsByUrgency(visible);
-  const needsAttention = (a: AccountView) =>
-    a.enabled && (a.latestSnapshot?.status === "error" || a.warn);
-  const urgent = sorted.filter(needsAttention);
-  const rest = sorted.filter((a) => !needsAttention(a));
-  // 只有同时存在两组时才分节，否则一个标题下挂全部账户反而更啰嗦。
-  const grouped = urgent.length > 0 && rest.length > 0;
 
   const planCount = accounts.filter((a) => (a.lane ?? "plan") === "plan").length;
   const apiCount = accounts.filter((a) => a.lane === "api").length;
-  const laneToggle =
-    accounts.length > 0 ? (
-      <SegmentedToggle
-        label={t("laneLabel")}
-        value={lane}
-        options={[
-          { value: "plan", label: `${t("lanePlan")} ${planCount}` },
-          { value: "api", label: `${t("laneApi")} ${apiCount}` },
-        ]}
-        onValueChange={changeLane}
-      />
-    ) : undefined;
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} actions={laneToggle} />
+      <PageHeader title={t("title")} />
 
       {error ? (
         <Alert variant="error">
@@ -160,21 +141,6 @@ export default function OverviewPage() {
               </EmptyMedia>
               <EmptyTitle>{t("empty")}</EmptyTitle>
               <EmptyDescription>{t("emptyHint")}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button render={<Link href="/settings" />}>{t("goSettings")}</Button>
-            </EmptyContent>
-          </Empty>
-        </Card>
-      ) : visible.length === 0 ? (
-        <Card>
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Gauge />
-              </EmptyMedia>
-              <EmptyTitle>{lane === "api" ? t("emptyApi") : t("emptyPlan")}</EmptyTitle>
-              <EmptyDescription>{lane === "api" ? t("emptyApiHint") : t("emptyPlanHint")}</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button render={<Link href="/settings" />}>{t("goSettings")}</Button>
@@ -224,31 +190,90 @@ export default function OverviewPage() {
             />
           </StatStrip>
 
-          {grouped ? (
-            <>
-              <AccountSection
-                title={t("attention")}
-                count={urgent.length}
-                accounts={urgent}
-                onRefreshed={requestRefresh}
-              />
-              <AccountSection
-                title={t("healthy")}
-                count={rest.length}
-                accounts={rest}
-                onRefreshed={requestRefresh}
-              />
-            </>
-          ) : (
-            <AccountSection
-              title={t("allAccounts")}
-              accounts={sorted}
-              onRefreshed={requestRefresh}
-            />
-          )}
+          <Tabs
+            value={lane}
+            onValueChange={(next) => {
+              if (next === "plan" || next === "api") changeLane(next);
+            }}
+            className="gap-6"
+          >
+            <TabsList aria-label={t("laneLabel")}>
+              <TabsTab value="plan" data-testid="overview-tab-plan">
+                {t("lanePlan")} {planCount}
+              </TabsTab>
+              <TabsTab value="api" data-testid="overview-tab-api">
+                {t("laneApi")} {apiCount}
+              </TabsTab>
+            </TabsList>
+
+            <TabsContent value="plan">
+              <LaneAccounts lane="plan" accounts={accounts} onRefreshed={requestRefresh} />
+            </TabsContent>
+            <TabsContent value="api">
+              <LaneAccounts lane="api" accounts={accounts} onRefreshed={requestRefresh} />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
+  );
+}
+
+/** 某一 lane 下的账户网格；该 lane 无账户时显示对应空态。 */
+function LaneAccounts({
+  lane,
+  accounts,
+  onRefreshed,
+}: {
+  lane: ProviderLane;
+  accounts: AccountView[];
+  onRefreshed: () => void;
+}) {
+  const t = useTranslations("overview");
+  const visible = accounts.filter((account) => (account.lane ?? "plan") === lane);
+
+  if (visible.length === 0) {
+    return (
+      <Card>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Gauge />
+            </EmptyMedia>
+            <EmptyTitle>{lane === "api" ? t("emptyApi") : t("emptyPlan")}</EmptyTitle>
+            <EmptyDescription>{lane === "api" ? t("emptyApiHint") : t("emptyPlanHint")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button render={<Link href="/settings" />}>{t("goSettings")}</Button>
+          </EmptyContent>
+        </Empty>
+      </Card>
+    );
+  }
+
+  const sorted = sortAccountsByUrgency(visible);
+  const needsAttention = (a: AccountView) =>
+    a.enabled && (a.latestSnapshot?.status === "error" || a.warn);
+  const urgent = sorted.filter(needsAttention);
+  const rest = sorted.filter((a) => !needsAttention(a));
+  const grouped = urgent.length > 0 && rest.length > 0;
+
+  if (grouped) {
+    return (
+      <div className="space-y-6">
+        <AccountSection
+          title={t("attention")}
+          count={urgent.length}
+          accounts={urgent}
+          onRefreshed={onRefreshed}
+        />
+        <AccountSection title={t("healthy")} count={rest.length} accounts={rest} onRefreshed={onRefreshed} />
+      </div>
+    );
+  }
+
+  return (
+    <AccountSection title={t("allAccounts")} accounts={sorted} onRefreshed={onRefreshed} />
   );
 }
 
