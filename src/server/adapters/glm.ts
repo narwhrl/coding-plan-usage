@@ -1,9 +1,10 @@
-import { numberOrNull, type Adapter, type AdapterResult } from "./types";
+import { isoOrNull, numberOrNull, type Adapter, type AdapterResult } from "./types";
 
 /**
  * GLM Coding Plan（官方）。
  * 来源：zai-org/zai-coding-plugins 官方插件 query-usage.mjs。
  *   TOKENS_LIMIT：第一个 → 5h，第二个 → weekly；TIME_LIMIT → mcp（percentage 为已用百分比）
+ *   nextResetTime（epoch ms）→ resetAt；官方脚本会丢掉该字段，社区插件保留。
  * - GET {base}/api/monitor/usage/model-usage?startTime=..&endTime=..（yyyy-MM-dd HH:mm:ss URL 编码）
  *   窗口=近 7 个本地自然日（00:00:00 → 23:59:59.999），汇总进 meta.modelUsage。
  * Authorization 头发原始 token（官方插件不带 Bearer；粘贴带前缀则剥离）。
@@ -28,7 +29,13 @@ type QuotaLimitItem = {
   percentage?: unknown;
   currentValue?: unknown;
   usage?: unknown;
+  nextResetTime?: unknown;
+  next_reset_time?: unknown;
 };
+
+function resetAtFromLimit(item: QuotaLimitItem): string | null {
+  return isoOrNull(item.nextResetTime ?? item.next_reset_time);
+}
 
 export const glmAdapter: Adapter = {
   id: "glm",
@@ -74,6 +81,7 @@ export const glmAdapter: Adapter = {
             kind: isFirst ? "5h" : "weekly",
             unit: "percent",
             remainingPct: Math.max(0, Math.min(100, 100 - pct)),
+            resetAt: resetAtFromLimit(item),
           });
         }
       } else if (item?.type === "TIME_LIMIT") {
@@ -87,6 +95,7 @@ export const glmAdapter: Adapter = {
             ...(used !== null ? { used } : {}),
             ...(total !== null ? { total } : {}),
             ...(pct !== null ? { remainingPct: Math.max(0, Math.min(100, 100 - pct)) } : {}),
+            resetAt: resetAtFromLimit(item),
           });
         }
       }
