@@ -50,7 +50,9 @@ export const accounts = sqliteTable(
 );
 
 /**
- * snapshots — 每次采集一条，全量保留。
+ * snapshots — 每次采集一条。留存按设置里的 retentionDays（默认 90 天）清理，
+ * raw 列按 rawRetentionDays（默认 7 天）清空；每账户的最新快照与最后一次成功快照
+ * 永不删除且保留 raw（详情页的 meta 住在那条 raw 里）。见 server/prune.ts。
  *
  * windows JSON 元素统一形状（前后端契约）：
  *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'mcp'|'premium'|'chat'|'lifetime'|string,

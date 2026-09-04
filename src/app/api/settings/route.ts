@@ -7,6 +7,8 @@ import { getSettings, patchSettings } from "@/server/settings";
 const PatchSchema = z.object({
   defaultIntervalMinutes: z.number().int().positive().max(24 * 60).optional(),
   warnPct: z.number().int().min(0).max(100).optional(),
+  retentionDays: z.number().int().min(0).max(3650).optional(),
+  rawRetentionDays: z.number().int().min(0).max(365).optional(),
 });
 
 export async function GET(): Promise<NextResponse> {

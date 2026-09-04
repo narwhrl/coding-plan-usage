@@ -231,6 +231,10 @@
       "defaultInterval": "Default interval",
       "warnPct": "Global warn threshold",
       "warnPctHint": "Accounts are flagged when remaining drops below this.",
+      "retentionDays": "Snapshot retention",
+      "retentionDaysHint": "History older than this is pruned; 0 keeps everything. The newest snapshot and the last successful snapshot of each account are always kept.",
+      "rawRetentionDays": "Raw response retention",
+      "rawRetentionDaysHint": "Raw response bodies are only kept for debugging and are cleared after this many days.",
       "save": "Save",
       "saved": "Saved"
     }
@@ -245,6 +249,7 @@
     "yes": "Yes",
     "no": "No",
     "minutes": "min",
+    "days": "days",
     "percent": "%",
     "showAll": "Show all {count}",
     "showLess": "Show less"

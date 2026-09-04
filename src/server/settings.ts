@@ -5,6 +5,10 @@ import { eq } from "drizzle-orm";
 export type GeneralSettings = {
   defaultIntervalMinutes: number;
   warnPct: number;
+  /** 超过该天数的历史快照会被清理；0 = 永久保留。 */
+  retentionDays: number;
+  /** 超过该天数的快照清空 raw 列（仅排障用的原始响应体）。 */
+  rawRetentionDays: number;
 };
 
 const KEY = "general";
@@ -12,7 +16,15 @@ const KEY = "general";
 const DEFAULTS: GeneralSettings = {
   defaultIntervalMinutes: 15,
   warnPct: 20,
+  retentionDays: 90,
+  rawRetentionDays: 7,
 };
+
+function intInRange(value: unknown, min: number, max: number, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max
+    ? Math.round(value)
+    : fallback;
+}
 
 export async function getSettings(): Promise<GeneralSettings> {
   const db = getDb();
@@ -29,6 +41,8 @@ export async function getSettings(): Promise<GeneralSettings> {
         typeof parsed.warnPct === "number" && parsed.warnPct >= 0 && parsed.warnPct <= 100
           ? parsed.warnPct
           : DEFAULTS.warnPct,
+      retentionDays: intInRange(parsed.retentionDays, 0, 3650, DEFAULTS.retentionDays),
+      rawRetentionDays: intInRange(parsed.rawRetentionDays, 0, 365, DEFAULTS.rawRetentionDays),
     };
   } catch {
     return { ...DEFAULTS };
@@ -46,6 +60,8 @@ export async function patchSettings(patch: Partial<GeneralSettings>): Promise<Ge
       typeof patch.warnPct === "number" && patch.warnPct >= 0 && patch.warnPct <= 100
         ? Math.round(patch.warnPct)
         : current.warnPct,
+    retentionDays: intInRange(patch.retentionDays, 0, 3650, current.retentionDays),
+    rawRetentionDays: intInRange(patch.rawRetentionDays, 0, 365, current.rawRetentionDays),
   };
   const db = getDb();
   db.insert(settings)

@@ -230,6 +230,10 @@
       "defaultInterval": "默认采集间隔",
       "warnPct": "全局预警阈值",
       "warnPctHint": "剩余低于该比例时标为预警。",
+      "retentionDays": "快照留存",
+      "retentionDaysHint": "超过该天数的历史快照会被清理；0 表示永久保留。每个账户的最新快照与最后一次成功快照始终保留。",
+      "rawRetentionDays": "原始响应留存",
+      "rawRetentionDaysHint": "仅用于排障的原始响应体，超期后清空以节省磁盘。",
       "save": "保存",
       "saved": "已保存"
     }
@@ -244,6 +248,7 @@
     "yes": "是",
     "no": "否",
     "minutes": "分钟",
+    "days": "天",
     "percent": "%",
     "showAll": "显示全部 {count} 条",
     "showLess": "收起"

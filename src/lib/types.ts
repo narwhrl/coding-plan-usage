@@ -87,6 +87,10 @@ export type ProviderView = {
 export type GeneralSettings = {
   defaultIntervalMinutes: number;
   warnPct: number;
+  /** 超过该天数的历史快照会被清理；0 = 永久保留。 */
+  retentionDays: number;
+  /** 超过该天数的快照清空 raw 列（仅排障用的原始响应体）。 */
+  rawRetentionDays: number;
 };
 
 export type HistorySnapshot = {
