@@ -31,7 +31,7 @@ function usageSummary(body: unknown, grok?: unknown): typeof fetch {
 describe("cursor adapter", () => {
   it("reads Cursor Models / Other Models / Grok Bot and ignores an exhausted used/limit pair", async () => {
     const seen: { url: string; method?: string; body?: string }[] = [];
-    const fetchFn = (async (input: unknown, init?: RequestInit) => {
+    const fetchFn = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
       const url = String(input);
       seen.push({ url, method: init?.method, body: typeof init?.body === "string" ? init.body : undefined });
       return usageSummary(
