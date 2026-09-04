@@ -240,6 +240,29 @@
       "rawRetentionDaysHint": "仅用于排障的原始响应体，超期后清空以节省磁盘。",
       "save": "保存",
       "saved": "已保存"
+    },
+    "notify": {
+      "title": "通知",
+      "subtitle": "额度偏低、采集失败与恢复正常时向你的 Webhook 推送 JSON。",
+      "enable": "启用 Webhook",
+      "url": "Webhook 地址",
+      "urlHint": "仅支持 http/https。地址与密钥都以密文保存。",
+      "urlConfigured": "当前：{host}",
+      "urlKeep": "留空保持不变",
+      "secret": "签名密钥",
+      "secretHint": "设置后请求头带 X-CPU-Signature（HMAC-SHA256）。",
+      "events": "推送事件",
+      "eventLow": "额度偏低",
+      "eventRecovered": "恢复正常",
+      "eventError": "采集失败",
+      "minInterval": "最小重复间隔",
+      "minIntervalHint": "同一账户持续处于同一异常状态时的重复提醒间隔。",
+      "save": "保存",
+      "saved": "已保存",
+      "saveFailed": "保存失败，请检查地址格式",
+      "test": "测试推送",
+      "testOk": "推送成功",
+      "testFailed": "推送失败：{error}"
     }
   },
   "common": {

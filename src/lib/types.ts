@@ -97,6 +97,15 @@ export type GeneralSettings = {
   rawRetentionDays: number;
 };
 
+/** 出站 Webhook 告警设置的脱敏形状：地址与密钥不回传明文，只给 host 与是否已设。 */
+export type NotifySettingsView = {
+  enabled: boolean;
+  events: { low: boolean; recovered: boolean; error: boolean };
+  minIntervalMinutes: number;
+  urlHost: string | null;
+  hasSecret: boolean;
+};
+
 export type HistorySnapshot = {
   id: number;
   fetchedAt: string;
