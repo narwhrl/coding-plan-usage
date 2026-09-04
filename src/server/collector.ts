@@ -50,10 +50,10 @@ function tightestForPayload(windows: Window[]): NotifyPayload["window"] {
   return {
     kind: best.kind,
     label: best.label ?? null,
-    remainingPct: best.remainingPct ?? null,
+    remainingPct: best.remainingPct as number,
     remaining: best.remaining ?? null,
     total: best.total ?? null,
-    unit: best.unit ?? null,
+    unit: best.unit,
     resetAt: best.resetAt ?? null,
   };
 }
