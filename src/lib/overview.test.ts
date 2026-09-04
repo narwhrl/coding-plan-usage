@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
+import type { BurnRate } from "./burn-rate";
 import { heroWindow, nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
@@ -38,6 +39,17 @@ function mkAccount(overrides: Partial<AccountView> = {}): AccountView {
 
 function window(remainingPct?: number, resetAt?: string): Window {
   return { kind: "daily", unit: "percent", remainingPct, resetAt };
+}
+
+function burn(exhaustsAt: string | null): BurnRate {
+  return {
+    pctPerHour: exhaustsAt ? 5 : 0,
+    currentPct: 50,
+    samples: 5,
+    spanMs: 86_400_000,
+    exhaustsAt,
+    beforeReset: null,
+  };
 }
 
 describe("tightestWindow", () => {
@@ -116,6 +128,7 @@ describe("overviewKpis", () => {
       errorCount: 0,
       tightest: null,
       nextReset: null,
+      firstExhaust: null,
     });
   });
 
@@ -142,6 +155,38 @@ describe("overviewKpis", () => {
 
     expect(result.tightest?.window.remainingPct).toBe(25);
     expect(result.nextReset?.window.remainingPct).toBe(25);
+  });
+
+  it("reports the account projected to run out first", () => {
+    const soon = new Date(Date.now() + 3 * 3_600_000).toISOString();
+    const later = new Date(Date.now() + 30 * 3_600_000).toISOString();
+    const accounts = [
+      mkAccount({ id: "later", latestSnapshot: snap([window(60)]), burn: burn(later) }),
+      mkAccount({ id: "soon", latestSnapshot: snap([window(30)]), burn: burn(soon) }),
+      mkAccount({ id: "no-burn", latestSnapshot: snap([window(45)]) }),
+    ];
+
+    expect(overviewKpis(accounts).firstExhaust).toEqual({ account: accounts[1], at: soon });
+  });
+
+  it("excludes errored and disabled accounts from the first-exhaust KPI", () => {
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+    const accounts = [
+      mkAccount({
+        id: "errored",
+        latestSnapshot: snap([], "error"),
+        lastOkSnapshot: snap([window(10)]),
+        burn: burn(at),
+      }),
+      mkAccount({ id: "disabled", enabled: false, latestSnapshot: snap([window(10)]), burn: burn(at) }),
+    ];
+
+    expect(overviewKpis(accounts).firstExhaust).toBeNull();
+  });
+
+  it("ignores accounts whose burn rate carries no projection", () => {
+    const account = mkAccount({ latestSnapshot: snap([window(80)]), burn: burn(null) });
+    expect(overviewKpis([account]).firstExhaust).toBeNull();
   });
 });
 

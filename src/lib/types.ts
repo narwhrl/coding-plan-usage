@@ -1,5 +1,7 @@
 /** 前端消费的 API 形状（与 /api 路由响应同步）。 */
 
+import type { BurnRate } from "./burn-rate";
+
 export type Window = {
   kind: string;
   label?: string;
@@ -62,6 +64,8 @@ export type AccountView = {
   warnThreshold: number;
   /** 近 7 天每日最紧 remainingPct（服务端聚合，可选以兼容旧响应）。 */
   spark?: SparkPoint[];
+  /** 近 24h 消耗速率与预计耗尽（服务端聚合；样本不足为 null）。 */
+  burn?: BurnRate | null;
 };
 export type CredentialFieldView = {
   key: string;

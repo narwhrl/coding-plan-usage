@@ -188,6 +188,16 @@ export default function OverviewPage() {
                   : undefined
               }
             />
+            <StatStripItem
+              data-testid="kpi-card"
+              label={t("kpiFirstExhaust")}
+              value={countdownText(kpis.firstExhaust?.at, tTime) ?? "—"}
+              hint={
+                kpis.firstExhaust
+                  ? `${kpis.firstExhaust.account.providerName} · ${kpis.firstExhaust.account.label}`
+                  : undefined
+              }
+            />
           </StatStrip>
 
           <Tabs

@@ -13,13 +13,21 @@ import {
   YAxis,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { SegmentedToggle } from "@/components/segmented-toggle";
-import { compactNumber, shortDateTime, shortTime, windowName } from "@/lib/format";
+import { compactNumber, countdownText, shortDateTime, shortTime, windowName } from "@/lib/format";
 import { buildTrendSeries, trendValueMode } from "@/lib/trend";
 import type { HistorySnapshot } from "@/lib/types";
+import type { BurnRate } from "@/lib/burn-rate";
 
 const RANGES = [
   { value: "24h", ms: 86_400_000, messageKey: "range24h" },
@@ -33,12 +41,15 @@ type RangeValue = (typeof RANGES)[number]["value"];
 export function TrendChart({
   history,
   warnPct,
+  burn,
 }: {
   history: HistorySnapshot[] | null;
   warnPct: number;
+  burn?: BurnRate | null;
 }) {
   const t = useTranslations();
   const tDetail = useTranslations("detail");
+  const tTime = useTranslations("time");
   const locale = useLocale();
   const [range, setRange] = useState<RangeValue>("7d");
 
@@ -65,6 +76,16 @@ export function TrendChart({
         <CardTitle render={<h2 />} className="text-base">
           {tDetail("chart")}
         </CardTitle>
+        {burn ? (
+          <CardDescription data-testid="burn-rate">
+            {burn.pctPerHour > 0 && burn.exhaustsAt
+              ? tDetail("burnRate", {
+                  rate: burn.pctPerHour.toFixed(2),
+                  time: countdownText(burn.exhaustsAt, tTime) ?? "",
+                })
+              : tDetail("burnStable")}
+          </CardDescription>
+        ) : null}
         <CardAction>
           <SegmentedToggle
             label={tDetail("rangeLabel")}
