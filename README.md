@@ -6,7 +6,8 @@ Single-user, self-hosted quota/usage dashboard for LLM coding-plan subscriptions
 - Credentials encrypted at rest with AES-256-GCM (`APP_ENCRYPTION_KEY`)
 - 60s tick scheduler, per-account interval (default 15 min), 6h backoff after 3 consecutive failures
 - Each provider's native units (tokens/credits/requests/currency) plus a unified remaining percentage; no USD conversion
-- Red warning when remaining falls below a threshold (20% global default, overridable per account)
+- Red warning when remaining falls below a threshold (20% global default, overridable per account), plus an optional outbound webhook
+- Burn rate over the last 24 h and a projected "runs out in …", on the cards, the KPI strip and the trend chart
 - Bilingual (zh/EN, `cpu_lang` cookie), light/dark theme
 - Single-container Docker deployment, SQLite file on a mounted volume
 - Optional per-account HTTP / HTTPS / SOCKS5 proxy for collection requests (password stored encrypted)
@@ -45,6 +46,11 @@ In `docker-compose.yml`, set `image: ghcr.io/<owner>/coding-plan-usage:latest` a
 | `SQLITE_PATH` | No | SQLite path, default `./data/app.db` (`/data/app.db` inside the container) |
 | `TZ` | No | Timezone (GLM query windows are built from server local time) |
 
+Retention is a setting, not an env var: snapshots are pruned after 90 days and the raw response bodies
+(debug-only, up to 20 KB each) are cleared after 7 days. Both are adjustable under Settings → General;
+`0` days of snapshot retention keeps everything. The newest snapshot and the last successful snapshot of
+each account are never pruned, so the dashboard keeps working no matter how aggressive the settings are.
+
 ## Getting credentials (one line each)
 
 | Provider | Credential | How to get it |
@@ -77,6 +83,18 @@ socks5://127.0.0.1:1080
 ## Custom providers (declarative)
 
 Settings → Custom providers: enter a Base URL, path, auth method (Bearer or a custom header), dot-path field mappings (`data.limits.0.remaining` supports array indices), and an optional divisor and unit; with an API key filled in you can "Test" before creating. No script execution — purely declarative.
+
+## Notifications (webhook)
+
+Settings → General → Notifications: point it at a URL you own and the app POSTs JSON when an account
+drops below its threshold, starts failing, or recovers. Only level *transitions* are delivered (with a
+configurable minimum repeat interval for accounts that stay abnormal), so a 15-minute poll interval
+doesn't turn into a firehose. An optional secret adds an `X-CPU-Signature` HMAC header; the URL and the
+secret are stored encrypted like provider credentials and are never echoed back or logged.
+
+There are no built-in IM or email templates — fan out from n8n / Bark / your own script instead. See
+[docs/notifications.md](docs/notifications.md) for the payload contract, the suppression rules and a
+signature-verification snippet.
 
 ## Local development
 

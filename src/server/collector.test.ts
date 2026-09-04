@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { getDb, migrate, _resetForTest } from "./db";
 import { bootstrapProviders } from "./bootstrap";
-import { pollAccount, _resetConsecutiveErrorsForTest } from "./collector";
-import { accounts, providers, snapshots } from "./db/schema";
+import { pollAccount } from "./collector";
+import { accounts, providers, settings, snapshots } from "./db/schema";
 import { eq } from "drizzle-orm";
 import { applyProxyUrl } from "./account-config";
 import { encryptSecret } from "./crypto";
 import { DeclarativeSpecSchema } from "./adapters/declarative";
+import { patchNotifySettings } from "./settings";
 
 process.env.APP_ENCRYPTION_KEY = "collector-test-key";
 process.env.SQLITE_PATH = ":memory:";
@@ -56,7 +57,7 @@ beforeEach(() => {
     })
     .onConflictDoUpdate({ target: providers.id, set: { declarativeSpec: JSON.stringify(SPEC) } })
     .run();
-  _resetConsecutiveErrorsForTest();
+  db.delete(settings).run();
 });
 
 afterAll(() => {
@@ -129,6 +130,49 @@ describe("collector", () => {
     }
   });
 
+  it("persists the failure counter and last error time", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("err", { status: 503 })) as typeof fetch;
+    const id = makeAccount();
+    try {
+      await expect(pollAccount(id)).rejects.toThrow();
+      await expect(pollAccount(id)).rejects.toThrow();
+      await expect(pollAccount(id)).rejects.toThrow();
+      const db = getDb();
+      let account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(3);
+      expect(account.lastErrorAt).toBeTruthy();
+      const failedAt = account.lastErrorAt;
+
+      globalThis.fetch = (async () =>
+        new Response(JSON.stringify({ data: { total: 1, remaining: 1 } }), { status: 200 })) as typeof fetch;
+      await pollAccount(id);
+      account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(0);
+      // 成功不清空最后失败时间：设置页仍要能显示「上次何时坏过」。
+      expect(account.lastErrorAt).toBe(failedAt);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("backs off immediately when a restart left the counter at the threshold", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => new Response("err", { status: 503 })) as typeof fetch;
+    // 计数落库后，重启不再清零：残留 2 次时下一次失败就该直接进 6h 退避。
+    const id = makeAccount({ config: JSON.stringify({ intervalMinutes: 15 }), consecutiveFailures: 2 });
+    const before = Date.now();
+    try {
+      await expect(pollAccount(id)).rejects.toThrow();
+      const db = getDb();
+      const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      expect(account.consecutiveFailures).toBe(3);
+      expect(account.nextFetchAt!).toBeGreaterThan(before + 5 * 60 * 60_000);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("redacts a proxy password in the error snapshot", async () => {
     const applied = applyProxyUrl({}, "http://user:s3cret-pass@127.0.0.1:9");
     expect(applied.ok).toBe(true);
@@ -158,6 +202,148 @@ describe("collector", () => {
       const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
       // 成功清零后单次失败应走常规间隔而非 6h 退避
       expect(account.nextFetchAt!).toBeLessThan(before + 20 * 60_000);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+const HOOK_URL = "http://hook.test/notify";
+
+/** adapter 请求与 webhook 投递共用 globalThis.fetch，按 URL 分流并记录后者。 */
+function stubFetch(remaining: number): { hooks: unknown[] } {
+  const hooks: unknown[] = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith(HOOK_URL)) {
+      hooks.push(JSON.parse(String(init?.body)));
+      return new Response(null, { status: 204 });
+    }
+    return new Response(JSON.stringify({ data: { total: 100, remaining } }), { status: 200 });
+  }) as unknown as typeof fetch;
+  return { hooks };
+}
+
+describe("collector notifications", () => {
+  it("delivers a webhook once when an account drops below the threshold", async () => {
+    const originalFetch = globalThis.fetch;
+    await patchNotifySettings({ enabled: true, url: HOOK_URL });
+    const id = makeAccount({ config: JSON.stringify({ warnPct: 20 }) });
+    try {
+      const { hooks } = stubFetch(5);
+      await pollAccount(id);
+
+      expect(hooks).toHaveLength(1);
+      expect(hooks[0]).toMatchObject({
+        version: 1,
+        event: "quota_low",
+        level: "low",
+        previousLevel: null,
+        threshold: 20,
+        window: { kind: "credits", remainingPct: 5 },
+      });
+      const db = getDb();
+      expect(db.select().from(accounts).where(eq(accounts.id, id)).get()!.alertLevel).toBe("low");
+
+      // 同一电平再采一次不重复推送（未到最小间隔）。
+      await pollAccount(id);
+      expect(hooks).toHaveLength(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("delivers a recovery webhook when the quota comes back", async () => {
+    const originalFetch = globalThis.fetch;
+    await patchNotifySettings({ enabled: true, url: HOOK_URL });
+    const id = makeAccount({ config: JSON.stringify({ warnPct: 20 }) });
+    try {
+      const low = stubFetch(5);
+      await pollAccount(id);
+      expect(low.hooks).toHaveLength(1);
+
+      const recovered = stubFetch(80);
+      await pollAccount(id);
+      expect(recovered.hooks).toHaveLength(1);
+      expect(recovered.hooks[0]).toMatchObject({ event: "quota_recovered", previousLevel: "low" });
+      expect(getDb().select().from(accounts).where(eq(accounts.id, id)).get()!.alertLevel).toBe("ok");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("stays silent while an account is healthy", async () => {
+    const originalFetch = globalThis.fetch;
+    await patchNotifySettings({ enabled: true, url: HOOK_URL });
+    const id = makeAccount({ config: JSON.stringify({ warnPct: 20 }) });
+    try {
+      const { hooks } = stubFetch(90);
+      await pollAccount(id);
+      await pollAccount(id);
+      expect(hooks).toHaveLength(0);
+      expect(getDb().select().from(accounts).where(eq(accounts.id, id)).get()!.alertLevel).toBe("ok");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("reports polling errors only from the second consecutive failure", async () => {
+    const originalFetch = globalThis.fetch;
+    await patchNotifySettings({ enabled: true, url: HOOK_URL });
+    const id = makeAccount();
+    const hooks: unknown[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith(HOOK_URL)) {
+        hooks.push(JSON.parse(String(init?.body)));
+        return new Response(null, { status: 204 });
+      }
+      return new Response("boom", { status: 500 });
+    }) as unknown as typeof fetch;
+    try {
+      await expect(pollAccount(id)).rejects.toThrow();
+      expect(hooks).toHaveLength(0);
+      await expect(pollAccount(id)).rejects.toThrow();
+      expect(hooks).toHaveLength(1);
+      expect(hooks[0]).toMatchObject({ event: "poll_error", level: "error", consecutiveFailures: 2 });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("keeps polling when the webhook endpoint is broken", async () => {
+    const originalFetch = globalThis.fetch;
+    await patchNotifySettings({ enabled: true, url: HOOK_URL });
+    const id = makeAccount({ config: JSON.stringify({ warnPct: 20 }) });
+    try {
+      globalThis.fetch = (async (input: string | URL | Request) => {
+        if (String(input).startsWith(HOOK_URL)) throw new Error("ECONNREFUSED");
+        return new Response(JSON.stringify({ data: { total: 100, remaining: 5 } }), { status: 200 });
+      }) as unknown as typeof fetch;
+
+      await pollAccount(id);
+
+      const db = getDb();
+      const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
+      // 快照与调度不受影响；电平仍然落库，但没记推送时间，下一轮还会重试。
+      expect(db.select().from(snapshots).where(eq(snapshots.accountId, id)).all()).toHaveLength(1);
+      expect(account.consecutiveFailures).toBe(0);
+      expect(account.alertLevel).toBe("low");
+      expect(account.alertNotifiedAt).toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("sends nothing while notifications are disabled", async () => {
+    const originalFetch = globalThis.fetch;
+    const id = makeAccount({ config: JSON.stringify({ warnPct: 20 }) });
+    try {
+      const { hooks } = stubFetch(1);
+      await pollAccount(id);
+      expect(hooks).toHaveLength(0);
+      // 关闭时连电平都不写：状态机只在启用后才开始跟踪。
+      expect(getDb().select().from(accounts).where(eq(accounts.id, id)).get()!.alertLevel).toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
     }

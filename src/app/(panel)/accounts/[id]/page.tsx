@@ -195,7 +195,14 @@ export default function AccountDetailPage() {
         <Alert variant="error">
           <TriangleAlert />
           <AlertTitle>{tDetail("statusError")}</AlertTitle>
-          <AlertDescription className="break-words">{account.latestSnapshot.error}</AlertDescription>
+          <AlertDescription className="break-words">
+            {account.latestSnapshot.error}
+            {account.consecutiveFailures > 1 ? (
+              <span className="mt-1 block">
+                {tDetail("consecutiveFailures", { count: account.consecutiveFailures })}
+              </span>
+            ) : null}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -280,7 +287,7 @@ export default function AccountDetailPage() {
       {usage ? <UsageCard usage={usage} /> : null}
       {tokenUsage ? <TokenUsageCard usage={tokenUsage} /> : null}
 
-      <TrendChart history={historyShown} warnPct={account.warnThreshold} />
+      <TrendChart history={historyShown} warnPct={account.warnThreshold} burn={account.burn} />
 
       <SnapshotHistory history={historyShown} warnPct={account.warnThreshold} />
 

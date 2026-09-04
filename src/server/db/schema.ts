@@ -35,6 +35,14 @@ export const accounts = sqliteTable(
     enabled: integer("enabled").notNull().default(1),
     /** ms epoch；null 视为立即到期 */
     nextFetchAt: integer("next_fetch_at"),
+    /** 连续采集失败次数；成功归零。进程重启后仍生效，用于 6h 退避与设置页展示。 */
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    /** 最近一次采集失败时刻（ISO UTC）；成功后不清空，仅用于展示。 */
+    lastErrorAt: text("last_error_at"),
+    /** 告警状态机上一次判定的电平：'ok' | 'low' | 'error'；null = 尚未判定过。 */
+    alertLevel: text("alert_level"),
+    /** 上次就该电平推送成功的时刻（ISO UTC），用于最小重复间隔抑制。 */
+    alertNotifiedAt: text("alert_notified_at"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull(),
   },
@@ -42,7 +50,9 @@ export const accounts = sqliteTable(
 );
 
 /**
- * snapshots — 每次采集一条，全量保留。
+ * snapshots — 每次采集一条。留存按设置里的 retentionDays（默认 90 天）清理，
+ * raw 列按 rawRetentionDays（默认 7 天）清空；每账户的最新快照与最后一次成功快照
+ * 永不删除且保留 raw（详情页的 meta 住在那条 raw 里）。见 server/prune.ts。
  *
  * windows JSON 元素统一形状（前后端契约）：
  *   { kind: '5h'|'weekly'|'monthly'|'credits'|'requests'|'balance'|'granted'|'topped_up'|'mcp'|'premium'|'chat'|'lifetime'|'cursor_models'|'other_models'|'grok_bot'|string,

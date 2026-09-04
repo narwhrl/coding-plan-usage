@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AccountView, SnapshotView, Window } from "./types";
+import type { BurnRate } from "./burn-rate";
 import { heroWindow, nextResetWindow, overviewKpis, sortAccountsByUrgency, tightestWindow } from "./overview";
 
 function snap(windows: Window[], status: SnapshotView["status"] = "ok"): SnapshotView {
@@ -25,6 +26,8 @@ function mkAccount(overrides: Partial<AccountView> = {}): AccountView {
     enabled: true,
     config: {},
     nextFetchAt: null,
+    consecutiveFailures: 0,
+    lastErrorAt: null,
     createdAt: "2026-09-02T12:00:00Z",
     latestSnapshot: null,
     lastOkSnapshot: null,
@@ -36,6 +39,17 @@ function mkAccount(overrides: Partial<AccountView> = {}): AccountView {
 
 function window(remainingPct?: number, resetAt?: string): Window {
   return { kind: "daily", unit: "percent", remainingPct, resetAt };
+}
+
+function burn(exhaustsAt: string | null, beforeReset: boolean | null = null): BurnRate {
+  return {
+    pctPerHour: exhaustsAt ? 5 : 0,
+    currentPct: 50,
+    samples: 5,
+    spanMs: 86_400_000,
+    exhaustsAt,
+    beforeReset,
+  };
 }
 
 describe("tightestWindow", () => {
@@ -114,6 +128,7 @@ describe("overviewKpis", () => {
       errorCount: 0,
       tightest: null,
       nextReset: null,
+      firstExhaust: null,
     });
   });
 
@@ -140,6 +155,52 @@ describe("overviewKpis", () => {
 
     expect(result.tightest?.window.remainingPct).toBe(25);
     expect(result.nextReset?.window.remainingPct).toBe(25);
+  });
+
+  it("reports the account projected to run out first", () => {
+    const soon = new Date(Date.now() + 3 * 3_600_000).toISOString();
+    const later = new Date(Date.now() + 30 * 3_600_000).toISOString();
+    const accounts = [
+      mkAccount({ id: "later", latestSnapshot: snap([window(60)]), burn: burn(later) }),
+      mkAccount({ id: "soon", latestSnapshot: snap([window(30)]), burn: burn(soon) }),
+      mkAccount({ id: "no-burn", latestSnapshot: snap([window(45)]) }),
+    ];
+
+    expect(overviewKpis(accounts).firstExhaust).toEqual({ account: accounts[1], at: soon });
+  });
+
+  it("excludes errored and disabled accounts from the first-exhaust KPI", () => {
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+    const accounts = [
+      mkAccount({
+        id: "errored",
+        latestSnapshot: snap([], "error"),
+        lastOkSnapshot: snap([window(10)]),
+        burn: burn(at),
+      }),
+      mkAccount({ id: "disabled", enabled: false, latestSnapshot: snap([window(10)]), burn: burn(at) }),
+    ];
+
+    expect(overviewKpis(accounts).firstExhaust).toBeNull();
+  });
+
+  it("ignores accounts whose burn rate carries no projection", () => {
+    const account = mkAccount({ latestSnapshot: snap([window(80)]), burn: burn(null) });
+    expect(overviewKpis([account]).firstExhaust).toBeNull();
+  });
+
+  it("ignores accounts that refill before they would run out", () => {
+    // beforeReset=false 时那个耗尽时刻不会到来，卡片也不显示它，KPI 不能自己说一套。
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+    const resetsFirst = mkAccount({ id: "resets", latestSnapshot: snap([window(40)]), burn: burn(at, false) });
+    const willRunOut = mkAccount({
+      id: "runs-out",
+      latestSnapshot: snap([window(40)]),
+      burn: burn(new Date(Date.now() + 10 * 3_600_000).toISOString(), true),
+    });
+
+    expect(overviewKpis([resetsFirst]).firstExhaust).toBeNull();
+    expect(overviewKpis([resetsFirst, willRunOut]).firstExhaust?.account.id).toBe("runs-out");
   });
 });
 

@@ -13,13 +13,39 @@ import {
   YAxis,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { SegmentedToggle } from "@/components/segmented-toggle";
-import { compactNumber, shortDateTime, shortTime, windowName } from "@/lib/format";
+import {
+  compactNumber,
+  countdownText,
+  shortDateTime,
+  shortTime,
+  windowName,
+  type Translate,
+} from "@/lib/format";
 import { buildTrendSeries, trendValueMode } from "@/lib/trend";
 import type { HistorySnapshot } from "@/lib/types";
+import type { BurnRate } from "@/lib/burn-rate";
+
+/**
+ * 消耗速率文案。窗口会在耗尽前先重置时只报速率、不报耗尽时刻：
+ * 那个时刻不会到来，概览卡和 KPI 也都不显示它，三处必须说同一件事。
+ */
+function burnRateText(burn: BurnRate, tDetail: Translate, tTime: Translate): string {
+  const rate = burn.pctPerHour.toFixed(2);
+  if (burn.pctPerHour <= 0 || !burn.exhaustsAt) return tDetail("burnStable");
+  if (burn.beforeReset === false) return tDetail("burnRateResets", { rate });
+  return tDetail("burnRate", { rate, time: countdownText(burn.exhaustsAt, tTime) ?? "" });
+}
 
 const RANGES = [
   { value: "24h", ms: 86_400_000, messageKey: "range24h" },
@@ -33,12 +59,15 @@ type RangeValue = (typeof RANGES)[number]["value"];
 export function TrendChart({
   history,
   warnPct,
+  burn,
 }: {
   history: HistorySnapshot[] | null;
   warnPct: number;
+  burn?: BurnRate | null;
 }) {
   const t = useTranslations();
   const tDetail = useTranslations("detail");
+  const tTime = useTranslations("time");
   const locale = useLocale();
   const [range, setRange] = useState<RangeValue>("7d");
 
@@ -65,6 +94,9 @@ export function TrendChart({
         <CardTitle render={<h2 />} className="text-base">
           {tDetail("chart")}
         </CardTitle>
+        {burn ? (
+          <CardDescription data-testid="burn-rate">{burnRateText(burn, tDetail, tTime)}</CardDescription>
+        ) : null}
         <CardAction>
           <SegmentedToggle
             label={tDetail("rangeLabel")}

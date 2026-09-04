@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ChevronRight, Clock, RefreshCw } from "lucide-react";
 import type { AccountView, Window } from "@/lib/types";
+import type { BurnRate } from "@/lib/burn-rate";
 import {
+  countdownText,
   relativeTimeText,
   resetText,
   unitName,
@@ -116,7 +118,7 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
             >
               {windowPrimaryText(hero, t)}
             </p>
-            {heroIsPct ? <HeroMeta w={hero} reset={heroReset} /> : null}
+            {heroIsPct ? <HeroMeta w={hero} reset={heroReset} burn={account.burn} /> : null}
           </div>
         ) : null}
 
@@ -150,15 +152,32 @@ export function AccountCard({ account, onRefreshed }: { account: AccountView; on
 }
 
 /** hero 窗口的辅助信息：绝对量与重置倒计时各占一行，避免窄卡里被截断。 */
-function HeroMeta({ w, reset }: { w: Window; reset: string | null }) {
+function HeroMeta({
+  w,
+  reset,
+  burn,
+}: {
+  w: Window;
+  reset: string | null;
+  burn?: BurnRate | null;
+}) {
   const t = useTranslations();
+  const tTime = useTranslations("time");
   const amount = windowAmountText(w, unitName(w.unit, t));
+  // 重置前用不完时不占这一行：卡片上「预计耗尽」只在真会撞线时才是信息。
+  const exhaust =
+    burn?.exhaustsAt && burn.beforeReset !== false ? countdownText(burn.exhaustsAt, tTime) : null;
   return (
     <>
       {amount ? <p className="truncate text-xs tabular-nums text-muted-foreground">{amount}</p> : null}
       {reset ? (
         <p className="truncate text-xs text-muted-foreground">
           {t("overview.windowReset")} {reset}
+        </p>
+      ) : null}
+      {exhaust ? (
+        <p className="truncate text-xs text-muted-foreground" data-testid="hero-exhaust">
+          {t("overview.exhaustAt", { time: exhaust })}
         </p>
       ) : null}
     </>

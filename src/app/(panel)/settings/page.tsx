@@ -37,11 +37,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
-import type { AccountView, GeneralSettings, ProviderView } from "@/lib/types";
+import type { AccountView, GeneralSettings, NotifySettingsView, ProviderView } from "@/lib/types";
 import { AccountAddForm } from "@/components/account-add-form";
 import { AccountStatusBadges } from "@/components/account-status";
 import { CustomProviderForm } from "@/components/custom-provider-form";
 import { EditAccountDialog } from "@/components/edit-account-dialog";
+import { NotifySettingsForm } from "@/components/notify-settings-form";
 import { ProviderMonogram } from "@/components/provider-monogram";
 import { PageHeader } from "@/components/page-header";
 
@@ -51,6 +52,7 @@ export default function SettingsPage() {
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [settings, setSettings] = useState<GeneralSettings | null>(null);
+  const [notify, setNotify] = useState<NotifySettingsView | null>(null);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [editing, setEditing] = useState<AccountView | null>(null);
@@ -76,8 +78,14 @@ export default function SettingsPage() {
         if (!ignore) setAccounts(data.accounts);
       }
       if (settingsRes.ok) {
-        const data = (await settingsRes.json()) as { settings: GeneralSettings };
-        if (!ignore) setSettings(data.settings);
+        const data = (await settingsRes.json()) as {
+          settings: GeneralSettings;
+          notify?: NotifySettingsView;
+        };
+        if (!ignore) {
+          setSettings(data.settings);
+          setNotify(data.notify ?? null);
+        }
       }
     }
 
@@ -201,13 +209,27 @@ export default function SettingsPage() {
           <CustomProviderForm providers={providers} onSaved={requestRefresh} />
         </TabsContent>
 
-        <TabsContent value="general">
+        {/* 通用与通知同处一个页签：两者都是全局默认值，另开页签只会让导航更碎。 */}
+        <TabsContent value="general" className="space-y-6">
           <GeneralSettingsForm
-            key={settings ? `${settings.defaultIntervalMinutes}:${settings.warnPct}` : "loading"}
+            key={
+              settings
+                ? `${settings.defaultIntervalMinutes}:${settings.warnPct}:${settings.retentionDays}:${settings.rawRetentionDays}`
+                : "loading"
+            }
             settings={settings}
             onSaved={requestRefresh}
             saved={generalSaved}
             onSavedChange={setGeneralSaved}
+          />
+          <NotifySettingsForm
+            key={
+              notify
+                ? `${notify.enabled}:${notify.urlHost ?? ""}:${notify.hasSecret}:${notify.minIntervalMinutes}`
+                : "loading"
+            }
+            notify={notify}
+            onSaved={requestRefresh}
           />
         </TabsContent>
       </Tabs>
@@ -242,7 +264,16 @@ function GeneralSettingsForm({
   const tCommon = useTranslations("common");
   const [interval, setIntervalValue] = useState(() => String(settings?.defaultIntervalMinutes ?? ""));
   const [warnPct, setWarnPct] = useState(() => String(settings?.warnPct ?? ""));
+  const [retentionDays, setRetentionDays] = useState(() => String(settings?.retentionDays ?? ""));
+  const [rawRetentionDays, setRawRetentionDays] = useState(() => String(settings?.rawRetentionDays ?? ""));
   const [busy, setBusy] = useState(false);
+
+  const apply = (next: GeneralSettings) => {
+    setIntervalValue(String(next.defaultIntervalMinutes));
+    setWarnPct(String(next.warnPct));
+    setRetentionDays(String(next.retentionDays));
+    setRawRetentionDays(String(next.rawRetentionDays));
+  };
 
   const save = async () => {
     if (!settings) return;
@@ -255,16 +286,17 @@ function GeneralSettingsForm({
         body: JSON.stringify({
           defaultIntervalMinutes: Number(interval) || undefined,
           warnPct: Number(warnPct) || undefined,
+          // 0 是合法值（永久保留 / 立即剥离），不能被 || undefined 吞掉。
+          retentionDays: retentionDays.trim() === "" ? undefined : Number(retentionDays),
+          rawRetentionDays: rawRetentionDays.trim() === "" ? undefined : Number(rawRetentionDays),
         }),
       });
       if (!response.ok) {
-        setIntervalValue(String(settings.defaultIntervalMinutes));
-        setWarnPct(String(settings.warnPct));
+        apply(settings);
         return;
       }
       const data = (await response.json()) as { settings: GeneralSettings };
-      setIntervalValue(String(data.settings.defaultIntervalMinutes));
-      setWarnPct(String(data.settings.warnPct));
+      apply(data.settings);
       onSavedChange(true);
       onSaved();
     } finally {
@@ -282,10 +314,12 @@ function GeneralSettingsForm({
         <CardDescription>{t("subtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* 两个数字字段并排，和「添加账户」里的同一对字段保持一致；单列会让 2 位数的输入框拉满整行。 */}
+        {/* 数字字段两列排布，和「添加账户」里的同一对字段保持一致；单列会让 2 位数的输入框拉满整行。 */}
         <div className="grid grid-cols-2 gap-4">
           {settings === null ? (
             <>
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </>
@@ -321,6 +355,38 @@ function GeneralSettingsForm({
                   </InputGroupAddon>
                 </InputGroup>
                 <FieldDescription>{t("warnPctHint")}</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="general-retention">{t("retentionDays")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="general-retention"
+                    inputMode="numeric"
+                    value={retentionDays}
+                    onValueChange={setRetentionDays}
+                    data-testid="general-retention"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>{tCommon("days")}</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>{t("retentionDaysHint")}</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="general-raw-retention">{t("rawRetentionDays")}</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="general-raw-retention"
+                    inputMode="numeric"
+                    value={rawRetentionDays}
+                    onValueChange={setRawRetentionDays}
+                    data-testid="general-raw-retention"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>{tCommon("days")}</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>{t("rawRetentionDaysHint")}</FieldDescription>
               </Field>
             </>
           )}

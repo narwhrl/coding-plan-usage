@@ -136,6 +136,10 @@
   才直接用 `countdownText`。
 - 计数类 KPI 的数字要和屏幕上的卡片数对得上；「只算启用中」这类口径差异放到副行文案里，
   别让「账户 3」旁边摆着 4 张卡。
+- 消耗速率与预计耗尽只有一个来源：服务端在 `/api/accounts` 里算好的 `account.burn`
+  （`src/lib/burn-rate.ts`）。前端不要自己再算一遍，两套结果对不上时用户没法判断该信谁；
+  耗尽时刻是 ISO 字符串，渲染统一走 `countdownText`。样本不足时它是 `null`，
+  按「这项暂时没有」处理，不要退化成 0。
 - 组件渲染期间不要调 `Date.now()`（`react-hooks/purity`）。需要"现在"的逻辑放进
   `src/lib/overview.ts`（`nextResetWindow`）或 `src/lib/trend.ts`（`buildTrendSeries`）这类纯函数。
 
