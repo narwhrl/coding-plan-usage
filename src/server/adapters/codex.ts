@@ -101,6 +101,29 @@ function resetAtFromWindow(source: CodexWindowRaw, now: Date): string | null {
   return new Date(now.getTime() + after * 1000).toISOString();
 }
 
+function usedPercentFromWindow(source: CodexWindowRaw): number | null {
+  const used = numberOrNull(
+    firstDefined(source, ["usedPercent", "used_percent", "usagePercent", "usage_percent", "percent", "utilization"]),
+  );
+  if (used !== null) return used;
+  // 窗口还在（有时长/重置）但 used_percent 暂时空着：当成 0%，不要整次采集失败。
+  if (
+    firstDefined(source, [
+      "limitWindowSeconds",
+      "limit_window_seconds",
+      "resetAt",
+      "reset_at",
+      "resetsAt",
+      "resets_at",
+      "resetAfterSeconds",
+      "reset_after_seconds",
+    ]) !== undefined
+  ) {
+    return 0;
+  }
+  return null;
+}
+
 function normalizeWindow(
   source: CodexWindowRaw | undefined,
   fallbackKind: string,
@@ -108,10 +131,22 @@ function normalizeWindow(
   extra?: { label?: string; minor?: boolean },
 ): Window | null {
   if (!source) return null;
-  const usedPct = numberOrNull(firstDefined(source, ["usedPercent", "used_percent"]));
+  const usedPct = usedPercentFromWindow(source);
   const window = pctWindow(windowKindFromSource(source, fallbackKind), extra?.label, "percent", usedPct, resetAtFromWindow(source, now));
   if (!window) return null;
   return extra?.minor ? { ...window, minor: true } : window;
+}
+
+function windowsFromUsage(usage: Record<string, unknown>, now: Date): Window[] {
+  const official = officialWindows(mergeRateLimit(usage.rateLimit, usage.rate_limit), now);
+  const extras = additionalWindows(usage, now, official.length > 0);
+  return [...official, ...extras];
+}
+
+function accessTokenExpired(token: string, now: Date, skewSec = 120): boolean {
+  const exp = numberOrNull(decodeJwtPayload(token).exp);
+  if (exp === null) return false;
+  return exp <= now.getTime() / 1000 + skewSec;
 }
 
 function rateLimitObject(value: unknown): Record<string, unknown> {
@@ -173,6 +208,7 @@ async function callUsage(
   const res = await fetchFn(USAGE_URL, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      "ChatGPT-Account-Id": chatgptAccountId,
       "chatgpt-account-id": chatgptAccountId,
       accept: "application/json",
     },
@@ -211,18 +247,7 @@ export const codexAdapter: Adapter = {
     const auth = parseAuthJson(raw);
     const chatgptAccountId = accountId(auth);
     let accessToken = typeof auth.access_token === "string" ? auth.access_token : "";
-
-    const fetchUsageWithRefresh = async (): Promise<unknown> => {
-      if (!accessToken) await refresh();
-      try {
-        return (await callUsage(ctx.fetchFn, accessToken, chatgptAccountId)).json;
-      } catch (error) {
-        const status = (error as Error & { httpStatus?: number }).httpStatus;
-        if (status !== 401 && status !== 403) throw error;
-        await refresh();
-        return (await callUsage(ctx.fetchFn, accessToken, chatgptAccountId)).json;
-      }
-    };
+    let didRefresh = false;
 
     async function refresh(): Promise<void> {
       const refreshTokenValue = typeof auth.refresh_token === "string" ? auth.refresh_token : "";
@@ -244,18 +269,47 @@ export const codexAdapter: Adapter = {
       if (typeof json.refresh_token === "string") auth.refresh_token = json.refresh_token;
       if (typeof json.id_token === "string") auth.id_token = json.id_token;
       auth.access_token = accessToken;
-      // 写回账户凭证（失败不阻断当次结果展示）
+      didRefresh = true;
       try {
-        ctx.onCredentialsRefreshed?.({ authJson: JSON.stringify({ tokens: auth }) });
+        ctx.onCredentialsRefreshed?.({
+          authJson: JSON.stringify({
+            tokens: {
+              access_token: accessToken,
+              refresh_token: auth.refresh_token,
+              account_id: chatgptAccountId,
+              ...(typeof auth.id_token === "string" ? { id_token: auth.id_token } : {}),
+            },
+          }),
+        });
       } catch {
         /* ignore */
       }
     }
 
-    const usage = unwrapUsage(await fetchUsageWithRefresh());
-    const official = officialWindows(mergeRateLimit(usage.rateLimit, usage.rate_limit), ctx.now());
-    const extras = additionalWindows(usage, ctx.now(), official.length > 0);
-    const windows = [...official, ...extras];
+    if (!accessToken || accessTokenExpired(accessToken, ctx.now())) {
+      await refresh();
+    }
+
+    const loadWindows = async (): Promise<{ usage: Record<string, unknown>; windows: Window[] }> => {
+      try {
+        const first = unwrapUsage((await callUsage(ctx.fetchFn, accessToken, chatgptAccountId)).json);
+        const windows = windowsFromUsage(first, ctx.now());
+        if (windows.length > 0) return { usage: first, windows };
+        if (didRefresh) return { usage: first, windows };
+        // 200 空包常见于过期 token 不回 401；刷新后再拉一次。
+        await refresh();
+        const retry = unwrapUsage((await callUsage(ctx.fetchFn, accessToken, chatgptAccountId)).json);
+        return { usage: retry, windows: windowsFromUsage(retry, ctx.now()) };
+      } catch (error) {
+        const status = (error as Error & { httpStatus?: number }).httpStatus;
+        if ((status !== 401 && status !== 403) || didRefresh) throw error;
+        await refresh();
+        const retry = unwrapUsage((await callUsage(ctx.fetchFn, accessToken, chatgptAccountId)).json);
+        return { usage: retry, windows: windowsFromUsage(retry, ctx.now()) };
+      }
+    };
+
+    const { usage, windows } = await loadWindows();
     if (windows.length === 0) throw new Error("Codex: wham/usage response has no usable windows");
     return {
       windows,

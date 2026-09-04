@@ -39,6 +39,8 @@ export type AdapterContext = {
   now: () => Date;
   /** OAuth 刷新得到新 tokens 后回写账户凭证（collector 注入；失败不阻断当次结果）。 */
   onCredentialsRefreshed?: (credentials: Record<string, string>) => void;
+  /** 手动强刷。适配器可用来少打定时轮询里的重接口，避免把额度接口打成降级包。 */
+  manual?: boolean;
 };
 
 export type ProviderBilling = "plan" | "api";

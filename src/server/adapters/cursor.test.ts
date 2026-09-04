@@ -80,18 +80,18 @@ describe("cursor adapter", () => {
     expect(seen.some((c) => c.url.includes("get-sand-usage-status") && c.method === "POST" && c.body === "{}")).toBe(true);
   });
 
-  it("does not treat a 0/0 dollar plan as a usable window", async () => {
-    const result = await cursorAdapter.fetchUsage({
-      ...ctxBase,
-      fetchFn: usageSummary({
-        billingCycleEnd: "2026-09-30T00:00:00.000Z",
-        individualUsage: {
-          plan: { used: 0, limit: 0, remaining: 0, totalPercentUsed: 12 },
-        },
+  it("does not treat used/limit or totalPercentUsed as a leftover monthly window", async () => {
+    await expect(
+      cursorAdapter.fetchUsage({
+        ...ctxBase,
+        fetchFn: usageSummary({
+          billingCycleEnd: "2026-09-30T00:00:00.000Z",
+          individualUsage: {
+            plan: { used: 2000, limit: 2000, remaining: 0, totalPercentUsed: 100 },
+          },
+        }),
       }),
-    });
-    expect(result.windows).toHaveLength(1);
-    expect(result.windows[0]).toMatchObject({ kind: "monthly", remainingPct: 88, unit: "percent" });
+    ).rejects.toThrow("no usable quota numbers");
   });
 
   it("parses team display-message percents when plan pools are missing", async () => {
@@ -109,23 +109,33 @@ describe("cursor adapter", () => {
     ]);
   });
 
-  it("falls back to a monthly dollar window when the account has no percent pools", async () => {
-    const result = await cursorAdapter.fetchUsage({
-      ...ctxBase,
-      fetchFn: usageSummary({
-        billingCycleEnd: "2026-09-01T00:00:00.000Z",
-        individualUsage: { plan: { used: 2500, limit: 10000, remaining: 7500 } },
-      }),
+  it("reads Spending-page planUsage when usage-summary only has an exhausted used/limit pair", async () => {
+    const fetchFn = routeFetch({
+      "https://cursor.com/api/usage-summary": () =>
+        new Response(
+          JSON.stringify({
+            billingCycleEnd: "2026-09-30T00:00:00.000Z",
+            individualUsage: { plan: { used: 2000, limit: 2000, remaining: 0 } },
+          }),
+          { status: 200 },
+        ),
+      "https://cursor.com/api/auth/me": () => new Response(JSON.stringify({ email: "a@b.c" }), { status: 200 }),
+      "https://cursor.com/api/dashboard/get-sand-usage-status": () => new Response("no grok", { status: 404 }),
+      "https://cursor.com/api/dashboard/get-current-period-usage": () =>
+        new Response(
+          JSON.stringify({
+            billingCycleEnd: "2026-09-30T00:00:00.000Z",
+            planUsage: { autoPercentUsed: 21.5, apiPercentUsed: 8 },
+          }),
+          { status: 200 },
+        ),
     });
-    expect(result.windows).toHaveLength(1);
-    expect(result.windows[0]).toMatchObject({
-      kind: "monthly",
-      unit: "usd",
-      used: 25,
-      total: 100,
-      remaining: 75,
-      remainingPct: 75,
-    });
+    const result = await cursorAdapter.fetchUsage({ ...ctxBase, fetchFn });
+    expect(result.windows.map((w) => [w.kind, w.remainingPct])).toEqual([
+      ["cursor_models", 78.5],
+      ["other_models", 92],
+    ]);
+    expect(result.windows.some((w) => w.kind === "monthly")).toBe(false);
   });
 
   it("keeps usage-summary data when Grok Bot request fails", async () => {

@@ -377,6 +377,77 @@ describe("codex adapter", () => {
     expect(result.windows[0].remainingPct).toBe(100);
     expect(result.windows[0].resetAt).toBe(new Date(Date.parse("2026-08-31T10:00:00Z")).toISOString());
   });
+
+  it("treats a window with reset but no used_percent as 0% used", async () => {
+    const fetchFn = routeFetch({
+      "https://chatgpt.com/backend-api/wham/usage": () =>
+        new Response(
+          JSON.stringify({
+            rate_limit: {
+              primary_window: { limit_window_seconds: 18000, reset_at: 1778091218 },
+              secondary_window: { limit_window_seconds: 604800, reset_at: 1778605571 },
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+    });
+    expect(result.windows).toHaveLength(2);
+    expect(result.windows[0]).toMatchObject({ kind: "5h", remainingPct: 100 });
+    expect(result.windows[1]).toMatchObject({ kind: "weekly", remainingPct: 100 });
+  });
+
+  it("refreshes and retries when wham/usage returns 200 with no windows", async () => {
+    let usageCalls = 0;
+    const fetchFn = routeFetch({
+      "https://auth.openai.com/oauth/token": () =>
+        new Response(JSON.stringify({ access_token: "new-at", refresh_token: "rt-2" }), { status: 200 }),
+      "https://chatgpt.com/backend-api/wham/usage": () => {
+        usageCalls += 1;
+        if (usageCalls === 1) return new Response(JSON.stringify({ detail: "token expired" }), { status: 200 });
+        return new Response(JSON.stringify({ rate_limit: { primary_window: { used_percent: 15 } } }), { status: 200 });
+      },
+    });
+    const onRefreshed = vi.fn();
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson },
+      config: {},
+      fetchFn,
+      onCredentialsRefreshed: onRefreshed,
+    });
+    expect(usageCalls).toBe(2);
+    expect(result.windows[0].remainingPct).toBe(85);
+    const written = JSON.parse(onRefreshed.mock.calls[0][0].authJson);
+    expect(written.tokens.access_token).toBe("new-at");
+    expect(written.tokens.account_id).toBe("acct-42");
+  });
+
+  it("refreshes a JWT that is already expired before the first usage call", async () => {
+    const expiredJwt = `h.${Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url")}.s`;
+    let usageAuth: string | undefined;
+    const fetchFn = routeFetch({
+      "https://auth.openai.com/oauth/token": () =>
+        new Response(JSON.stringify({ access_token: "fresh-at" }), { status: 200 }),
+      "https://chatgpt.com/backend-api/wham/usage": (init) => {
+        usageAuth = (init?.headers as Record<string, string>).Authorization;
+        return new Response(JSON.stringify({ rate_limit: { primary_window: { used_percent: 4 } } }), { status: 200 });
+      },
+    });
+    const result = await codexAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { authJson: JSON.stringify({ tokens: { access_token: expiredJwt, refresh_token: "rt-1", id_token: makeIdToken("acct-42") } }) },
+      config: {},
+      fetchFn,
+    });
+    expect(usageAuth).toBe("Bearer fresh-at");
+    expect(result.windows[0].remainingPct).toBe(96);
+  });
 });
 
 describe("claude adapter", () => {
