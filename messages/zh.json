@@ -168,6 +168,16 @@
       "baseUrl": "API 地址",
       "displayCurrency": "显示币种",
       "displayCurrencyHint": "官方余额可能同时有人民币和美元；卡片只展示选中的一种，没有该币种时退回另一种。",
+      "proxy": "代理",
+      "proxyHint": "可选。支持 http://、https://、socks5://，可带用户名密码。",
+      "proxyEditHint": "留空则清除。密码不会回显；地址未改则保留原密码。",
+      "proxyPlaceholder": "http://127.0.0.1:7890",
+      "proxyError": {
+        "invalid_url": "代理地址不是合法 URL",
+        "unsupported_protocol": "仅支持 http、https、socks5",
+        "missing_host": "代理地址缺少主机",
+        "invalid_port": "代理端口无效"
+      },
       "save": "保存",
       "saving": "保存中…",
       "saved": "已添加",

@@ -5,20 +5,14 @@ import { getDb } from "@/server/db";
 import { accounts, providers, snapshots } from "@/server/db/schema";
 import { requireAuth } from "@/server/auth";
 import { ensureBootstrapped } from "@/server/bootstrap";
+import { AccountConfigInputSchema, mergeAccountConfig, serializeStoredConfig } from "@/server/account-config";
 import { encryptSecret, decryptSecret } from "@/server/crypto";
 import { getAdapter } from "@/server/adapters/registry";
 
 const PatchSchema = z.object({
   label: z.string().min(1).max(100).optional(),
   credentials: z.record(z.string(), z.string()).optional(),
-  config: z
-    .object({
-      intervalMinutes: z.number().int().positive().optional(),
-      warnPct: z.number().int().min(0).max(100).optional(),
-      baseUrl: z.string().optional(),
-      displayCurrency: z.enum(["CNY", "USD"]).optional(),
-    })
-    .optional(),
+  config: AccountConfigInputSchema.optional(),
   enabled: z.boolean().optional(),
 });
 
@@ -41,7 +35,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (data.label !== undefined) set.label = data.label;
   if (data.enabled !== undefined) set.enabled = data.enabled ? 1 : 0;
   if (data.config !== undefined) {
-    set.config = JSON.stringify({ ...safeConfig(account.config), ...data.config });
+    const merged = mergeAccountConfig(account.config, data.config);
+    if (!merged.ok) {
+      return NextResponse.json({ error: `invalid proxy: ${merged.error}` }, { status: 400 });
+    }
+    set.config = serializeStoredConfig(merged.stored);
     set.nextFetchAt = account.nextFetchAt; // 不动调度
   }
   if (data.credentials !== undefined) {
@@ -72,15 +70,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     db.update(accounts).set(set).where(eq(accounts.id, id)).run();
   }
   return NextResponse.json({ ok: true });
-}
-
-function safeConfig(text: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
 }
 
 /** DELETE /api/accounts/[id]（级联删快照，schema FK onDelete cascade）。 */

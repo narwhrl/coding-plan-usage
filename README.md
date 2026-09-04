@@ -9,6 +9,7 @@ Single-user, self-hosted quota/usage dashboard for LLM coding-plan subscriptions
 - Red warning when remaining falls below a threshold (20% global default, overridable per account)
 - Bilingual (zh/EN, `cpu_lang` cookie), light/dark theme
 - Single-container Docker deployment, SQLite file on a mounted volume
+- Optional per-account HTTP / HTTPS / SOCKS5 proxy for collection requests (password stored encrypted)
 
 ## Quick start (Docker Compose)
 
@@ -60,6 +61,18 @@ In `docker-compose.yml`, set `image: ghcr.io/<owner>/coding-plan-usage:latest` a
 | OpenRouter | API Key | [OpenRouter](https://openrouter.ai/keys) → Create Key |
 
 Unofficial endpoints (Codex/Claude/Cursor/Grok/Copilot) may break as upstreams change: failures surface as a red error state on the card, the last successful data stays visible — fix the credential or wait for upstream to recover.
+
+## Account proxy
+
+Each account can optionally send its collection requests through an HTTP, HTTPS, or SOCKS5 proxy. Set it on add/edit:
+
+```
+http://127.0.0.1:7890
+https://user:pass@proxy.example:8443
+socks5://127.0.0.1:1080
+```
+
+`socks5h://` is accepted and treated as SOCKS5 (DNS is resolved by the proxy). The password is encrypted with `APP_ENCRYPTION_KEY` and never returned by the API; saving the same host/user again keeps the stored password.
 
 ## Custom providers (declarative)
 
