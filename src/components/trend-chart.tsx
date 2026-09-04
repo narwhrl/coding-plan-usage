@@ -97,7 +97,7 @@ export function TrendChart({
             </div>
             <div className="h-64" data-testid="trend-chart">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis
                     dataKey="timeLabel"
@@ -107,7 +107,7 @@ export function TrendChart({
                     minTickGap={48}
                   />
                   <YAxis
-                    width={isPercent ? 36 : 48}
+                    width="auto"
                     domain={isPercent ? [0, 100] : ["auto", "auto"]}
                     ticks={isPercent ? [0, 25, 50, 75, 100] : undefined}
                     tickFormatter={(v: number) => (isPercent ? `${v}%` : compactNumber(v))}
