@@ -168,6 +168,8 @@ describe("windowName / unitName", () => {
 
   it("keeps distinctive labels and localizes currency suffixes", () => {
     expect(windowName({ kind: "daily", label: "Hailuo-2.3" }, t)).toBe("Hailuo-2.3");
+    expect(windowName({ kind: "5h", label: "GPT-5.3-Codex-Spark", minor: true }, t)).toBe("GPT-5.3-Codex-Spark");
+    expect(windowName({ kind: "5h", label: "GPT-5.3-Codex-Spark" }, t)).toBe("window.5h");
     expect(windowName({ kind: "requests", label: "Premium requests" }, t)).toBe("window.premium");
     expect(windowName({ kind: "requests", label: "Chat" }, t)).toBe("window.chat");
     expect(windowName({ kind: "balance", label: "Balance (CNY)" }, t)).toBe("window.withCurrency(name=window.balance,currency=CNY)");
