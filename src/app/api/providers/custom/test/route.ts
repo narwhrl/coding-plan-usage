@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "@/server/auth";
 import { ensureBootstrapped } from "@/server/bootstrap";
 import { DeclarativeSpecSchema, declarativeAdapter } from "@/server/adapters/declarative";
+import { wrapFetchWithTimeout } from "@/server/fetch-timeout";
 
 const TestSchema = z.object({
   spec: z.record(z.string(), z.unknown()),
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const result = await adapter.fetchUsage({
       credentials: { apiKey: parsed.data.apiKey },
       config: {},
-      fetchFn: fetch,
+      fetchFn: wrapFetchWithTimeout(fetch),
       now: () => new Date(),
     });
     return NextResponse.json({ ok: true, windows: result.windows, balance: result.balance ?? null });

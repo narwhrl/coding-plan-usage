@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { checkPassword, issueSessionCookie, verifySessionCookie } from "./auth";
+import { checkPassword, issueSessionCookie, requestIsHttps, verifySessionCookie } from "./auth";
 
 describe("auth", () => {
   it("issues and verifies a session round-trip", () => {
     process.env.ACCESS_PASSWORD = "s3cret";
     const cookie = issueSessionCookie();
     expect(cookie.name).toBe("cpu_session");
-    expect(cookie.options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+    expect(cookie.options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/", secure: false });
+    expect(issueSessionCookie(true).options).toMatchObject({ secure: true });
     expect(verifySessionCookie(cookie.value)).toBe(true);
   });
 
@@ -38,6 +39,24 @@ describe("auth", () => {
     delete process.env.ACCESS_PASSWORD;
     expect(verifySessionCookie(undefined)).toBe(true);
     expect(checkPassword("anything")).toBe(true);
+  });
+
+  it("treats X-Forwarded-Proto and https URLs as secure", () => {
+    const httpsReq = {
+      headers: new Headers({ "x-forwarded-proto": "https, http" }),
+      nextUrl: new URL("http://localhost:3000/api/auth/login"),
+    };
+    const httpReq = {
+      headers: new Headers(),
+      nextUrl: new URL("http://localhost:3000/api/auth/login"),
+    };
+    const directHttps = {
+      headers: new Headers(),
+      nextUrl: new URL("https://example.test/api/auth/login"),
+    };
+    expect(requestIsHttps(httpsReq)).toBe(true);
+    expect(requestIsHttps(httpReq)).toBe(false);
+    expect(requestIsHttps(directHttps)).toBe(true);
   });
 
   it("checks passwords", () => {

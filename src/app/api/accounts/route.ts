@@ -18,6 +18,7 @@ import {
   toPublicConfig,
 } from "@/server/account-config";
 import { dailyTightestSeries, parseWindows } from "@/server/spark";
+import { adapterMetaFromRaw } from "@/server/snapshot-meta";
 
 /**
  * GET /api/accounts → 概览数据（卡片所需全部在内）：
@@ -97,7 +98,7 @@ export async function GET(): Promise<NextResponse> {
       createdAt: account.createdAt,
       latestSnapshot: latest ? serializeSnapshot(latest) : null,
       lastOkSnapshot: lastOk ? serializeSnapshot(lastOk) : null,
-      warn: warnWindows.length > 0 || adapterMeta(lastOk?.raw ?? null)?.isAvailable === false,
+      warn: warnWindows.length > 0 || adapterMetaFromRaw(lastOk?.raw ?? null)?.isAvailable === false,
       warnThreshold,
       spark: dailyTightestSeries(
         (sparkByAccount.get(account.id) ?? []).map((r) => ({
@@ -127,7 +128,7 @@ function serializeSnapshot(s: typeof snapshots.$inferSelect) {
     error: s.error,
     windows: parseWindows(s.windows),
     balance: parseBalance(s.balance),
-    meta: s.raw ? (safeParseMeta(s.raw) as Record<string, unknown> | null) : null,
+    meta: adapterMetaFromRaw(s.raw),
   };
 }
 
@@ -141,25 +142,6 @@ function parseBalance(text: string | null): { amount: number; currency?: string 
   } catch {
     return null;
   }
-}
-
-function safeParseMeta(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-/** raw 列形状：{ meta: 适配器 meta, responses }。isAvailable===false 表示官方余额不足以继续调 API。 */
-function adapterMeta(raw: string | null): Record<string, unknown> | null {
-  if (!raw) return null;
-  const parsed = safeParseMeta(raw);
-  if (!parsed || typeof parsed !== "object") return null;
-  const meta = (parsed as { meta?: unknown }).meta;
-  return meta && typeof meta === "object" && !Array.isArray(meta)
-    ? (meta as Record<string, unknown>)
-    : null;
 }
 
 const CreateAccountSchema = z.object({

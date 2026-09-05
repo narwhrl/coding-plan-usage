@@ -4,7 +4,8 @@ import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, Pencil, Trash2, Users } from "lucide-react";
+import { Check, Pencil, Trash2, TriangleAlert, Users } from "lucide-react";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogBackdrop,
@@ -55,6 +56,7 @@ export default function SettingsPage() {
   const [notify, setNotify] = useState<NotifySettingsView | null>(null);
   const [refreshVersion, requestRefresh] = useReducer((version: number) => version + 1, 0);
   const [generalSaved, setGeneralSaved] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState<AccountView | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   // 每次打开自增：强制 EditAccountDialog 重挂载，表单不带着上一次的旧值。
@@ -64,28 +66,33 @@ export default function SettingsPage() {
     let ignore = false;
 
     async function load() {
-      const [providersRes, accountsRes, settingsRes] = await Promise.all([
-        fetch("/api/providers"),
-        fetch("/api/accounts"),
-        fetch("/api/settings"),
-      ]);
-      if (providersRes.ok) {
-        const data = (await providersRes.json()) as { providers: ProviderView[] };
-        if (!ignore) setProviders(data.providers);
-      }
-      if (accountsRes.ok) {
-        const data = (await accountsRes.json()) as { accounts: AccountView[] };
-        if (!ignore) setAccounts(data.accounts);
-      }
-      if (settingsRes.ok) {
-        const data = (await settingsRes.json()) as {
-          settings: GeneralSettings;
-          notify?: NotifySettingsView;
-        };
-        if (!ignore) {
-          setSettings(data.settings);
-          setNotify(data.notify ?? null);
+      try {
+        const [providersRes, accountsRes, settingsRes] = await Promise.all([
+          fetch("/api/providers"),
+          fetch("/api/accounts"),
+          fetch("/api/settings"),
+        ]);
+        if (providersRes.ok) {
+          const data = (await providersRes.json()) as { providers: ProviderView[] };
+          if (!ignore) setProviders(data.providers);
         }
+        if (accountsRes.ok) {
+          const data = (await accountsRes.json()) as { accounts: AccountView[] };
+          if (!ignore) setAccounts(data.accounts);
+        }
+        if (settingsRes.ok) {
+          const data = (await settingsRes.json()) as {
+            settings: GeneralSettings;
+            notify?: NotifySettingsView;
+          };
+          if (!ignore) {
+            setSettings(data.settings);
+            setNotify(data.notify ?? null);
+          }
+        }
+        if (!ignore) setLoadError(!providersRes.ok || !accountsRes.ok || !settingsRes.ok);
+      } catch {
+        if (!ignore) setLoadError(true);
       }
     }
 
@@ -104,6 +111,12 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
+      {loadError ? (
+        <Alert variant="error">
+          <TriangleAlert />
+          <AlertTitle>{t("loadFailed")}</AlertTitle>
+        </Alert>
+      ) : null}
       <Tabs defaultValue="accounts" className="gap-6">
         <TabsList>
           <TabsTab value="accounts">{t("tabAccounts")}</TabsTab>
@@ -121,6 +134,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               {accounts.length === 0 ? (
+                loadError ? null : (
                 <Empty className="py-8 md:py-10">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -130,6 +144,7 @@ export default function SettingsPage() {
                     <EmptyDescription>{t("accounts.emptyHint")}</EmptyDescription>
                   </EmptyHeader>
                 </Empty>
+                )
               ) : (
                 <ul className="divide-y divide-border">
                   {accounts.map((account) => (
@@ -267,6 +282,7 @@ function GeneralSettingsForm({
   const [retentionDays, setRetentionDays] = useState(() => String(settings?.retentionDays ?? ""));
   const [rawRetentionDays, setRawRetentionDays] = useState(() => String(settings?.rawRetentionDays ?? ""));
   const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const apply = (next: GeneralSettings) => {
     setIntervalValue(String(next.defaultIntervalMinutes));
@@ -279,6 +295,7 @@ function GeneralSettingsForm({
     if (!settings) return;
     setBusy(true);
     onSavedChange(false);
+    setSaveError(false);
     try {
       const response = await fetch("/api/settings", {
         method: "PATCH",
@@ -293,12 +310,16 @@ function GeneralSettingsForm({
       });
       if (!response.ok) {
         apply(settings);
+        setSaveError(true);
         return;
       }
       const data = (await response.json()) as { settings: GeneralSettings };
       apply(data.settings);
       onSavedChange(true);
       onSaved();
+    } catch {
+      apply(settings);
+      setSaveError(true);
     } finally {
       setBusy(false);
     }
@@ -400,6 +421,12 @@ function GeneralSettingsForm({
             <span className="flex items-center gap-1.5 text-sm text-success-foreground">
               <Check className="size-4" aria-hidden="true" />
               {t("saved")}
+            </span>
+          ) : null}
+          {saveError ? (
+            <span className="flex items-center gap-1.5 text-sm text-destructive-foreground">
+              <TriangleAlert className="size-4" aria-hidden="true" />
+              {t("saveFailed")}
             </span>
           ) : null}
         </div>

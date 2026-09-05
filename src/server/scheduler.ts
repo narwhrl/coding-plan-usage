@@ -6,6 +6,7 @@ import { bootstrapProviders } from "./bootstrap";
 import { pollAccount } from "./collector";
 import { pruneSnapshots } from "./prune";
 import { getSettings } from "./settings";
+import { isAuthEnabled } from "./auth";
 
 /**
  * 60s tick 调度器：查 enabled=1 且 nextFetchAt<=now（null 视为立即到期）的账户，
@@ -73,6 +74,11 @@ export function startScheduler(): void {
   if (timer) return;
   migrate();
   bootstrapProviders();
+  if (!isAuthEnabled()) {
+    console.warn(
+      "[auth] ACCESS_PASSWORD is unset; the panel accepts every request. Set ACCESS_PASSWORD before exposing this host beyond localhost.",
+    );
+  }
   console.log("[scheduler] started: db migrated, providers bootstrapped, tick every 60s");
   void tick(); // 启动立即跑一轮
   timer = setInterval(() => void tick(), TICK_MS);

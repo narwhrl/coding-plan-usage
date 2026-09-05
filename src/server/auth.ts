@@ -32,7 +32,18 @@ export function checkPassword(password: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-export function issueSessionCookie(): { name: string; value: string; options: Record<string, unknown> } {
+/** HTTPS 或反代终止 TLS（X-Forwarded-Proto）时给 cookie 加 Secure。 */
+export function requestIsHttps(request: { headers: Headers; nextUrl: URL }): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto");
+  if (forwarded) return forwarded.split(",")[0]?.trim() === "https";
+  return request.nextUrl.protocol === "https:";
+}
+
+export function issueSessionCookie(secure = false): {
+  name: string;
+  value: string;
+  options: Record<string, unknown>;
+} {
   const expMs = Date.now() + SESSION_TTL_MS;
   return {
     name: SESSION_COOKIE,
@@ -42,6 +53,7 @@ export function issueSessionCookie(): { name: string; value: string; options: Re
       sameSite: "lax",
       path: "/",
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
+      secure,
     },
   };
 }
