@@ -229,6 +229,7 @@ export async function pollAccount(accountId: string, options: { manual?: boolean
     const result = await adapter.fetchUsage({
       credentials,
       config: { baseUrl: config.baseUrl },
+      manual: options.manual === true,
       fetchFn: async (input, init) => {
         const response = await fetchFn(input, init);
         // raw 记录原始响应 JSON 便于排障（克隆读 body 不影响 adapter 自身读取）
