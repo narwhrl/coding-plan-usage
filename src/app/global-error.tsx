@@ -19,7 +19,7 @@ export default function GlobalError({
     ? { title: "Something went wrong", retry: "Try again" }
     : { title: "出错了", retry: "重试" };
   return (
-    <html lang={english ? "en" : "zh"}>
+    <html lang={english ? "en" : "zh"} translate="no" className="notranslate">
       <body className="flex min-h-full flex-col items-center justify-center bg-background px-4 py-16 text-foreground">
         <div className="w-full max-w-sm space-y-4 text-center">
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{copy.title}</h1>

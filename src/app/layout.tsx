@@ -29,12 +29,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
+  // 面板已自带中英切换。translate=no 减少翻译扩展在切 tab 时改 DOM。
   return (
     <html
       lang={locale}
+      translate="no"
       suppressHydrationWarning
       className={cn(
-        "h-full antialiased",
+        "h-full antialiased notranslate",
         calSans.variable,
         inter.variable,
         geistMono.variable,
