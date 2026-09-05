@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  installBrowserExtensionErrorFilter,
-  isBrowserExtensionError,
-  type ErrorFilterTarget,
-} from "./browser-extension-error";
+import { installBrowserExtensionErrorFilter, isBrowserExtensionError } from "./browser-extension-error";
 
 const IMMERSIVE_TRANSLATE_STACK = [
   "TypeError: Cannot read properties of undefined (reading 'search')",
@@ -60,7 +56,7 @@ describe("installBrowserExtensionErrorFilter", () => {
   }
 
   it("stops extension errors before a later bubble listener", () => {
-    const target = new EventTarget() as ErrorFilterTarget;
+    const target = new EventTarget();
     let bubbled = false;
     installBrowserExtensionErrorFilter(target);
     target.addEventListener("error", () => {
@@ -80,7 +76,7 @@ describe("installBrowserExtensionErrorFilter", () => {
   });
 
   it("lets application errors reach later listeners", () => {
-    const target = new EventTarget() as ErrorFilterTarget;
+    const target = new EventTarget();
     let bubbled = false;
     installBrowserExtensionErrorFilter(target);
     target.addEventListener("error", () => {
