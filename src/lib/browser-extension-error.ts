@@ -27,7 +27,7 @@ export function isBrowserExtensionError(input: BrowserExtensionErrorInput): bool
   return EXTENSION_URL.test([input.filename, input.message, textOf(input.error)].filter(Boolean).join("\n"));
 }
 
-export type ErrorFilterTarget = Pick<EventTarget, "addEventListener"> & {
+export type ErrorFilterTarget = EventTarget & {
   [INSTALLED]?: true;
 };
 
