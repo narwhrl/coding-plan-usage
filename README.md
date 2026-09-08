@@ -7,7 +7,6 @@ Single-user, self-hosted quota/usage dashboard for LLM coding-plan subscriptions
 - 60s tick scheduler, per-account interval (default 15 min), 6h backoff after 3 consecutive failures
 - Each provider's native units (tokens/credits/requests/currency) plus a unified remaining percentage; no USD conversion
 - Red warning when remaining falls below a threshold (20% global default, overridable per account), plus an optional outbound webhook
-- Burn rate over the last 24 h and a projected "runs out in …", on the cards, the KPI strip and the trend chart
 - Bilingual (zh/EN, `cpu_lang` cookie), light/dark theme
 - Single-container Docker deployment, SQLite file on a mounted volume
 - Optional per-account HTTP / HTTPS / SOCKS5 proxy for collection requests (password stored encrypted)
