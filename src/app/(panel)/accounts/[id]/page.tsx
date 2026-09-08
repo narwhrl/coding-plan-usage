@@ -334,7 +334,7 @@ export default function AccountDetailPage() {
       {usage ? <UsageCard usage={usage} /> : null}
       {tokenUsage ? <TokenUsageCard usage={tokenUsage} /> : null}
 
-      <TrendChart history={historyShown} warnPct={account.warnThreshold} burn={account.burn} />
+      <TrendChart history={historyShown} warnPct={account.warnThreshold} />
 
       <SnapshotHistory history={historyShown} warnPct={account.warnThreshold} />
 

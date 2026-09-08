@@ -9,7 +9,6 @@ import { ensureBootstrapped } from "@/server/bootstrap";
 import { encryptSecret } from "@/server/crypto";
 import { getSettings } from "@/server/settings";
 import { adapterBilling, getAdapter } from "@/server/adapters/registry";
-import { computeBurnRate } from "@/lib/burn-rate";
 import {
   AccountConfigInputSchema,
   mergeAccountConfig,
@@ -106,14 +105,6 @@ export async function GET(): Promise<NextResponse> {
           windows: parseWindows(r.windows),
         })),
         now,
-      ),
-      // 复用上面为 spark 批量取的近 7 天全分辨率快照，24h 窗口够用且不额外查库。
-      burn: computeBurnRate(
-        (sparkByAccount.get(account.id) ?? []).map((r) => ({
-          fetchedAt: r.fetchedAt,
-          windows: parseWindows(r.windows),
-        })),
-        { now },
       ),
     });
   }
