@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { adapterMetaFromRaw, carryForwardAdapterMeta, tokenUsageFromRecentRaw } from "./snapshot-meta";
+import {
+  adapterMetaFromRaw,
+  carryForwardAdapterMeta,
+  extraCardMetaFromRecentRaw,
+  needsExtraCardLookback,
+} from "./snapshot-meta";
 
 const tokenUsage = { lastDayTokens: 10, weekTokens: 20, monthTokens: 30, days: [] };
+const modelUsage = {
+  x_time: ["2026-09-01 08:00"],
+  tokensUsage: [12],
+  modelCallCount: [3],
+};
 
 describe("adapterMetaFromRaw", () => {
   it("returns only the adapter meta object", () => {
@@ -22,11 +32,11 @@ describe("adapterMetaFromRaw", () => {
 
 describe("carryForwardAdapterMeta", () => {
   it("fills missing tokenUsage and modelUsage from the previous snapshot", () => {
-    const previous = JSON.stringify({ meta: { tokenUsage, modelUsage: { x_time: [] }, isAvailable: true } });
+    const previous = JSON.stringify({ meta: { tokenUsage, modelUsage, isAvailable: true } });
     expect(carryForwardAdapterMeta({ isAvailable: true }, previous)).toEqual({
       isAvailable: true,
       tokenUsage,
-      modelUsage: { x_time: [] },
+      modelUsage,
     });
   });
 
@@ -41,14 +51,31 @@ describe("carryForwardAdapterMeta", () => {
   });
 });
 
-describe("tokenUsageFromRecentRaw", () => {
-  it("returns the newest parseable tokenUsage", () => {
+describe("extraCardMetaFromRecentRaw", () => {
+  it("does not look back when lastOk already has parseable cards", () => {
+    expect(needsExtraCardLookback({ tokenUsage, modelUsage })).toBe(false);
     expect(
-      tokenUsageFromRecentRaw([
+      extraCardMetaFromRecentRaw({ tokenUsage, modelUsage }, [
+        { raw: JSON.stringify({ meta: { tokenUsage: { lastDayTokens: 99, weekTokens: 99, monthTokens: 99, days: [] } } }) },
+      ]),
+    ).toBeUndefined();
+  });
+
+  it("does not look back a key the adapter explicitly stored as null", () => {
+    expect(needsExtraCardLookback({ tokenUsage: null, modelUsage })).toBe(false);
+    expect(
+      extraCardMetaFromRecentRaw({ tokenUsage: null }, [{ raw: JSON.stringify({ meta: { tokenUsage } }) }]),
+    ).toBeUndefined();
+  });
+
+  it("recovers tokenUsage and modelUsage from older snapshots", () => {
+    expect(needsExtraCardLookback({})).toBe(true);
+    expect(
+      extraCardMetaFromRecentRaw({}, [
         { raw: JSON.stringify({ meta: null }) },
-        { raw: JSON.stringify({ meta: { tokenUsage } }) },
+        { raw: JSON.stringify({ meta: { tokenUsage, modelUsage } }) },
         { raw: JSON.stringify({ meta: { tokenUsage: { lastDayTokens: 1 } } }) },
       ]),
-    ).toEqual(tokenUsage);
+    ).toEqual({ tokenUsage, modelUsage });
   });
 });

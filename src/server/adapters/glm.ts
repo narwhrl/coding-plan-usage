@@ -111,7 +111,8 @@ export const glmAdapter: Adapter = {
       const modelRes = await ctx.fetchFn(`${base}/api/monitor/usage/model-usage${qs}`, { headers });
       if (modelRes.ok) {
         const modelBody = (await modelRes.json()) as { data?: unknown };
-        meta.modelUsage = modelBody?.data ?? null;
+        // 缺 data 不写 key，让采集层继承上次；写 null 会挡住继承、详情页整卡消失。
+        if (modelBody?.data != null) meta.modelUsage = modelBody.data;
       }
     } catch {
       /* best-effort */

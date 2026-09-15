@@ -1,3 +1,6 @@
+import { parseModelUsage } from "@/lib/model-usage";
+import { parseTokenUsage } from "@/lib/token-usage";
+
 /**
  * 快照 raw 列形状：{ meta: 适配器 meta, responses?: { url, status, body } }。
  * API 只回传 meta，responses 是排障切片，不进浏览器。
@@ -43,11 +46,49 @@ export function carryForwardAdapterMeta(
   return merged;
 }
 
-/** 从近到远找第一条能用的 tokenUsage（详情页首次进入时 lastOk 可能刚好没采到账单）。 */
-export function tokenUsageFromRecentRaw(rows: { raw: string | null }[]): unknown | undefined {
+function hasOwn(meta: Record<string, unknown> | null, key: string): boolean {
+  return !!meta && Object.prototype.hasOwnProperty.call(meta, key);
+}
+
+export type ExtraCardLookback = { token?: boolean; model?: boolean };
+
+export function needsExtraCardLookback(
+  lastOkMeta: Record<string, unknown> | null,
+  want: ExtraCardLookback = { token: true, model: true },
+): boolean {
+  const needToken = !!want.token && !parseTokenUsage(lastOkMeta?.tokenUsage) && !hasOwn(lastOkMeta, "tokenUsage");
+  const needModel = !!want.model && !parseModelUsage(lastOkMeta?.modelUsage) && !hasOwn(lastOkMeta, "modelUsage");
+  return needToken || needModel;
+}
+
+/**
+ * lastOk 缺 Token 消耗 / 用量卡时，从近到远找第一条能解析的 meta。
+ * 适配器显式写了 null 的 key 不回看（表示这次采到了「没有」）。
+ */
+export function extraCardMetaFromRecentRaw(
+  lastOkMeta: Record<string, unknown> | null,
+  rows: { raw: string | null }[],
+  want: ExtraCardLookback = { token: true, model: true },
+): Record<string, unknown> | undefined {
+  const needToken = !!want.token && !parseTokenUsage(lastOkMeta?.tokenUsage) && !hasOwn(lastOkMeta, "tokenUsage");
+  const needModel = !!want.model && !parseModelUsage(lastOkMeta?.modelUsage) && !hasOwn(lastOkMeta, "modelUsage");
+  if (!needToken && !needModel) return undefined;
+
+  let tokenUsage: unknown | undefined;
+  let modelUsage: unknown | undefined;
   for (const row of rows) {
-    const tokenUsage = adapterMetaFromRaw(row.raw)?.tokenUsage;
-    if (tokenUsage && typeof tokenUsage === "object" && !Array.isArray(tokenUsage)) return tokenUsage;
+    const meta = adapterMetaFromRaw(row.raw);
+    if (needToken && tokenUsage === undefined && parseTokenUsage(meta?.tokenUsage)) {
+      tokenUsage = meta!.tokenUsage;
+    }
+    if (needModel && modelUsage === undefined && parseModelUsage(meta?.modelUsage)) {
+      modelUsage = meta!.modelUsage;
+    }
+    if ((!needToken || tokenUsage !== undefined) && (!needModel || modelUsage !== undefined)) break;
   }
-  return undefined;
+
+  const extra: Record<string, unknown> = {};
+  if (needToken && tokenUsage !== undefined) extra.tokenUsage = tokenUsage;
+  if (needModel && modelUsage !== undefined) extra.modelUsage = modelUsage;
+  return Object.keys(extra).length > 0 ? extra : undefined;
 }

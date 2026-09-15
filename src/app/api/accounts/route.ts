@@ -17,8 +17,12 @@ import {
   toPublicConfig,
 } from "@/server/account-config";
 import { dailyTightestSeries, parseWindows } from "@/server/spark";
-import { adapterMetaFromRaw, tokenUsageFromRecentRaw } from "@/server/snapshot-meta";
-import { parseTokenUsage } from "@/lib/token-usage";
+import {
+  adapterMetaFromRaw,
+  extraCardMetaFromRecentRaw,
+  needsExtraCardLookback,
+  type ExtraCardLookback,
+} from "@/server/snapshot-meta";
 
 /**
  * GET /api/accounts → 概览数据（卡片所需全部在内）：
@@ -97,7 +101,7 @@ export async function GET(): Promise<NextResponse> {
       lastErrorAt: account.lastErrorAt,
       createdAt: account.createdAt,
       latestSnapshot: latest ? serializeSnapshot(latest) : null,
-      lastOkSnapshot: lastOk ? serializeSnapshot(lastOk, tokenUsageFallback(account.providerId, lastOk)) : null,
+      lastOkSnapshot: lastOk ? serializeSnapshot(lastOk, extraCardFallback(account.providerId, lastOk)) : null,
       warn: warnWindows.length > 0 || adapterMetaFromRaw(lastOk?.raw ?? null)?.isAvailable === false,
       warnThreshold,
       spark: dailyTightestSeries(
@@ -125,15 +129,21 @@ function serializeSnapshot(s: typeof snapshots.$inferSelect, extraMeta?: Record<
   };
 }
 
-/** MiniMax lastOk 刚好没采到账单时，向前翻几张成功快照把 Token 消耗卡补回来。 */
-function tokenUsageFallback(
+/** lastOk 缺 Token 消耗 / 用量卡时，向前翻几张成功快照补上（MiniMax / GLM / Cursor）。 */
+function extraCardLookbackFor(providerId: string): ExtraCardLookback | undefined {
+  if (providerId === "minimax") return { token: true };
+  if (providerId === "glm" || providerId === "cursor") return { model: true };
+  return undefined;
+}
+
+function extraCardFallback(
   providerId: string,
   lastOk: typeof snapshots.$inferSelect,
 ): Record<string, unknown> | undefined {
-  if (providerId !== "minimax") return undefined;
-  const meta = adapterMetaFromRaw(lastOk.raw);
-  if (parseTokenUsage(meta?.tokenUsage)) return undefined;
-  if (meta && Object.prototype.hasOwnProperty.call(meta, "tokenUsage")) return undefined;
+  const want = extraCardLookbackFor(providerId);
+  if (!want) return undefined;
+  const lastOkMeta = adapterMetaFromRaw(lastOk.raw);
+  if (!needsExtraCardLookback(lastOkMeta, want)) return undefined;
   const priors = getDb()
     .select({ raw: snapshots.raw })
     .from(snapshots)
@@ -141,8 +151,7 @@ function tokenUsageFallback(
     .orderBy(desc(snapshots.id))
     .limit(8)
     .all();
-  const tokenUsage = tokenUsageFromRecentRaw(priors);
-  return tokenUsage ? { tokenUsage } : undefined;
+  return extraCardMetaFromRecentRaw(lastOkMeta, priors, want);
 }
 
 function parseBalance(text: string | null): { amount: number; currency?: string } | null {

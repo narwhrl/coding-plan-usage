@@ -83,6 +83,25 @@ describe("glm adapter", () => {
     );
   });
 
+  it("omits modelUsage when the extra endpoint fails so the collector can inherit", async () => {
+    const fetchFn = routeFetch({
+      "https://api.z.ai/api/monitor/usage/quota/limit": () =>
+        new Response(JSON.stringify({ data: { limits: [{ type: "TOKENS_LIMIT", percentage: 10 }] } }), {
+          status: 200,
+        }),
+      "https://api.z.ai/api/monitor/usage/model-usage": () => new Response("nope", { status: 500 }),
+    });
+    const result = await glmAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "tok-123" },
+      config: { baseUrl: "https://api.z.ai" },
+      fetchFn,
+    });
+    expect(result.windows).toHaveLength(1);
+    expect(result.meta).toEqual({});
+    expect(Object.prototype.hasOwnProperty.call(result.meta ?? {}, "modelUsage")).toBe(false);
+  });
+
   it("sends raw token without Bearer prefix", async () => {
     const seen: string[] = [];
     const fetchFn = (async (_input: unknown, init?: RequestInit) => {

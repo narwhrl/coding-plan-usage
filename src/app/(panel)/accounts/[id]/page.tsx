@@ -192,7 +192,10 @@ export default function AccountDetailPage() {
   const historyShown = historyForCurrency(history, parseDisplayCurrency(account.config.displayCurrency));
   const hero = heroWindow(display);
   const heroIsPct = hero?.remainingPct !== undefined;
-  const usage = parseModelUsage(display?.meta?.modelUsage);
+  const usage =
+    parseModelUsage(display?.meta?.modelUsage) ??
+    parseModelUsage(shown.lastOkSnapshot?.meta?.modelUsage) ??
+    parseModelUsage(shown.latestSnapshot?.meta?.modelUsage);
   const tokenUsage =
     parseTokenUsage(display?.meta?.tokenUsage) ??
     parseTokenUsage(shown.lastOkSnapshot?.meta?.tokenUsage) ??
