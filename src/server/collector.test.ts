@@ -4,7 +4,7 @@ import { getDb, migrate, _resetForTest } from "./db";
 import { bootstrapProviders } from "./bootstrap";
 import { pollAccount, _resetInflightForTest } from "./collector";
 import { accounts, providers, settings, snapshots } from "./db/schema";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { applyProxyUrl } from "./account-config";
 import { encryptSecret } from "./crypto";
 import { DeclarativeSpecSchema } from "./adapters/declarative";
@@ -203,6 +203,39 @@ describe("collector", () => {
       const account = db.select().from(accounts).where(eq(accounts.id, id)).get()!;
       // 成功清零后单次失败应走常规间隔而非 6h 退避
       expect(account.nextFetchAt!).toBeLessThan(before + 20 * 60_000);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("carries tokenUsage forward when the new poll omits it", async () => {
+    const originalFetch = globalThis.fetch;
+    const id = makeAccount();
+    const db = getDb();
+    db.insert(snapshots)
+      .values({
+        accountId: id,
+        fetchedAt: new Date().toISOString(),
+        status: "ok",
+        windows: JSON.stringify([{ kind: "credits", unit: "credits", remainingPct: 50 }]),
+        raw: JSON.stringify({
+          meta: { tokenUsage: { lastDayTokens: 11, weekTokens: 22, monthTokens: 33, days: [] } },
+        }),
+      })
+      .run();
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ data: { total: 10, remaining: 5 } }), { status: 200 })) as typeof fetch;
+    try {
+      await pollAccount(id);
+      const latest = db
+        .select()
+        .from(snapshots)
+        .where(eq(snapshots.accountId, id))
+        .orderBy(desc(snapshots.id))
+        .limit(1)
+        .get();
+      const meta = JSON.parse(latest!.raw!) as { meta?: { tokenUsage?: { lastDayTokens: number } } };
+      expect(meta.meta?.tokenUsage?.lastDayTokens).toBe(11);
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -78,7 +78,7 @@ export default function AccountDetailPage() {
     // 账户和快照各自落地：慢的历史接口不该拖住头部。失败要能和「账户不存在」分开。
     async function loadAccount() {
       try {
-        const res = await fetch("/api/accounts");
+        const res = await fetch("/api/accounts", { cache: "no-store" });
         if (ignore) return;
         if (!res.ok) {
           setAccountRow(null);
@@ -103,7 +103,7 @@ export default function AccountDetailPage() {
 
     async function loadHistory() {
       try {
-        const res = await fetch(`/api/accounts/${id}/snapshots`);
+        const res = await fetch(`/api/accounts/${id}/snapshots`, { cache: "no-store" });
         if (ignore) return;
         if (!res.ok) {
           setHistoryRows([]);
@@ -193,7 +193,10 @@ export default function AccountDetailPage() {
   const hero = heroWindow(display);
   const heroIsPct = hero?.remainingPct !== undefined;
   const usage = parseModelUsage(display?.meta?.modelUsage);
-  const tokenUsage = parseTokenUsage(display?.meta?.tokenUsage);
+  const tokenUsage =
+    parseTokenUsage(display?.meta?.tokenUsage) ??
+    parseTokenUsage(shown.lastOkSnapshot?.meta?.tokenUsage) ??
+    parseTokenUsage(shown.latestSnapshot?.meta?.tokenUsage);
   const nextReset = nextResetWindow(windows);
   const balance = display?.balance;
   const hasBalanceWindow = windows.some((w) => w.kind === "balance");
