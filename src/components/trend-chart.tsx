@@ -11,6 +11,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type DotItemDotProps,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartTooltipContent } from "@/components/chart-tooltip";
 import { SegmentedToggle } from "@/components/segmented-toggle";
 import { compactNumber, shortDateTime, shortTime, windowName } from "@/lib/format";
-import { buildTrendSeries, trendValueMode } from "@/lib/trend";
+import { buildTrendSeries, TREND_RESETS_KEY, trendValueMode, type TrendPoint } from "@/lib/trend";
 import type { HistorySnapshot } from "@/lib/types";
 
 const RANGES = [
@@ -28,6 +29,32 @@ const RANGES = [
 ] as const;
 
 type RangeValue = (typeof RANGES)[number]["value"];
+
+/** 该点发生重置的系列名（buildTrendSeries 嵌入，无重置时为 undefined）。 */
+function resetMarksOf(point: unknown): string[] {
+  const marks = (point as TrendPoint | null | undefined)?.[TREND_RESETS_KEY];
+  return Array.isArray(marks) ? marks : [];
+}
+
+/**
+ * 重置点标记：系列色描边、卡面底色填充的空心圆环，骑在折线的「跳回」处。
+ * 普通点不画（折线保持干净），缺测点没有坐标也跳过。
+ */
+function ResetDot({ cx, cy, stroke, dataKey, payload }: DotItemDotProps) {
+  if (typeof cx !== "number" || typeof cy !== "number") return null;
+  if (!resetMarksOf(payload).includes(String(dataKey))) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={3.5}
+      fill="var(--card)"
+      stroke={stroke}
+      strokeWidth={1.5}
+      pointerEvents="none"
+    />
+  );
+}
 
 /** 每窗口一条折线（配额 remainingPct 或预付费 remaining）；系列名取本地化窗口名。 */
 export function TrendChart({
@@ -58,6 +85,7 @@ export function TrendChart({
   );
   const valueMode = useMemo(() => trendValueMode(history), [history]);
   const isPercent = valueMode === "percent";
+  const hasResets = useMemo(() => data.some((point) => resetMarksOf(point).length > 0), [data]);
 
   return (
     <Card>
@@ -94,6 +122,16 @@ export function TrendChart({
                   {name}
                 </span>
               ))}
+              {hasResets ? (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span
+                    className="size-2 rounded-full border-[1.5px]"
+                    style={{ borderColor: "var(--muted-foreground)" }}
+                    aria-hidden="true"
+                  />
+                  {tDetail("chartReset")}
+                </span>
+              ) : null}
             </div>
             <div className="h-64" data-testid="trend-chart">
               <ResponsiveContainer width="100%" height="100%">
@@ -129,6 +167,11 @@ export function TrendChart({
                       <ChartTooltipContent
                         {...props}
                         formatValue={(v) => (isPercent ? `${v.toFixed(0)}%` : compactNumber(v))}
+                        entryNote={(entry) =>
+                          resetMarksOf(entry.payload).includes(String(entry.dataKey))
+                            ? tDetail("chartResetNote")
+                            : null
+                        }
                       />
                     )}
                   />
@@ -139,7 +182,7 @@ export function TrendChart({
                       dataKey={name}
                       stroke={`var(--chart-${(index % 5) + 1})`}
                       strokeWidth={2}
-                      dot={false}
+                      dot={ResetDot}
                       activeDot={{ r: 3, strokeWidth: 0 }}
                       connectNulls
                     />
