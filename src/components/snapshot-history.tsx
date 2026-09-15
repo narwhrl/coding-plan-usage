@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,43 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { quotaTextClassName } from "@/components/quota-bar";
-import { shortDateTime, windowName, windowPrimaryText } from "@/lib/format";
+import { compactNumber, shortDateTime, windowName } from "@/lib/format";
+import {
+  buildChangeLog,
+  formatSigned,
+  type WindowChange,
+} from "@/lib/snapshot-changelog";
 import type { HistorySnapshot } from "@/lib/types";
 
 const COLLAPSED_ROWS = 12;
 
-/** 快照历史表：最新在上，默认只展示前 12 行，其余折叠。 */
+function metricText(change: WindowChange, value: number | null): string {
+  if (value === null) return "—";
+  return change.metric === "percent" ? `${Math.round(value)}%` : compactNumber(value);
+}
+
+function changeValueText(
+  change: WindowChange,
+  tDetail: ReturnType<typeof useTranslations>,
+): string {
+  if (change.change === "appeared") {
+    return tDetail("historyAppeared", { value: metricText(change, change.to) });
+  }
+  if (change.change === "disappeared") {
+    return tDetail("historyDisappeared", { value: metricText(change, change.from) });
+  }
+  const from = metricText(change, change.from);
+  const to = metricText(change, change.to);
+  if (change.delta === null || change.from === null || change.to === null) {
+    return tDetail("historyFromTo", { from, to });
+  }
+  const signed =
+    change.metric === "percent" ? formatSigned(Math.round(change.delta)) : formatSigned(change.delta);
+  const delta = change.metric === "percent" ? tDetail("historyDeltaPct", { delta: signed }) : signed;
+  return tDetail("historyChange", { from, to, delta });
+}
+
+/** 变化记录：只列出相对上一快照有额度变化的窗口，最新在上，默认 12 行。 */
 export function SnapshotHistory({
   history,
   warnPct,
@@ -33,9 +64,8 @@ export function SnapshotHistory({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
-
-  const rows = (history ?? []).slice().reverse();
-  const visible = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
+  const events = useMemo(() => buildChangeLog(history), [history]);
+  const visible = expanded ? events : events.slice(0, COLLAPSED_ROWS);
 
   return (
     <Card>
@@ -51,8 +81,10 @@ export function SnapshotHistory({
               <Skeleton key={index} className="h-8" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{tDetail("historyEmpty")}</p>
+        ) : events.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {history.length === 0 ? tDetail("historyEmpty") : tDetail("historyUnchanged")}
+          </p>
         ) : (
           <>
             <Table>
@@ -63,41 +95,47 @@ export function SnapshotHistory({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visible.map((snap) => (
-                  <TableRow key={snap.id}>
+                {visible.map((event) => (
+                  <TableRow key={event.snapshotId}>
                     <TableCell className="align-top text-xs whitespace-nowrap text-muted-foreground">
-                      <time dateTime={snap.fetchedAt}>{shortDateTime(snap.fetchedAt, locale)}</time>
+                      <time dateTime={event.fetchedAt}>{shortDateTime(event.fetchedAt, locale)}</time>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
-                        {(snap.windows ?? []).length === 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          (snap.windows ?? []).map((w, index) => (
-                            <Badge key={index} variant="outline" className="gap-1 font-normal">
-                              <span className="text-muted-foreground">{windowName(w, t)}</span>
-                              <span
-                                className={quotaTextClassName(w.remainingPct, warnPct) || undefined}
-                              >
-                                {windowPrimaryText(w, t) ?? "—"}
-                              </span>
-                            </Badge>
-                          ))
-                        )}
+                        {event.changes.map((change) => (
+                          <Badge
+                            key={change.key}
+                            variant="outline"
+                            className="gap-1 font-normal"
+                            data-testid="history-change"
+                          >
+                            <span className="text-muted-foreground">{windowName(change.window, t)}</span>
+                            <span
+                              className={
+                                quotaTextClassName(
+                                  change.metric === "percent" ? (change.to ?? undefined) : undefined,
+                                  warnPct,
+                                ) || undefined
+                              }
+                            >
+                              {changeValueText(change, tDetail)}
+                            </span>
+                          </Badge>
+                        ))}
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            {rows.length > COLLAPSED_ROWS ? (
+            {events.length > COLLAPSED_ROWS ? (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setExpanded((prev) => !prev)}
                 data-testid="history-toggle"
               >
-                {expanded ? tCommon("showLess") : tCommon("showAll", { count: rows.length })}
+                {expanded ? tCommon("showLess") : tCommon("showAll", { count: events.length })}
               </Button>
             ) : null}
           </>
