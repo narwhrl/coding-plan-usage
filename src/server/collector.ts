@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { redactProxySecrets } from "@/lib/proxy";
 import { getDb } from "./db";
 import { accounts, providers, snapshots } from "./db/schema";
@@ -8,6 +8,7 @@ import { decryptSecret, encryptSecret } from "./crypto";
 import { createAccountFetch } from "./proxy-fetch";
 import { getNotifySettings, getSettings } from "./settings";
 import { FETCH_TIMEOUT_MS } from "./fetch-timeout";
+import { carryForwardAdapterMeta } from "./snapshot-meta";
 import {
   decideNotifyEvent,
   dispatchWebhook,
@@ -277,6 +278,14 @@ async function pollAccountUnchecked(accountId: string, options: { manual?: boole
       },
     });
 
+    const previousOk = db
+      .select({ raw: snapshots.raw })
+      .from(snapshots)
+      .where(and(eq(snapshots.accountId, accountId), eq(snapshots.status, "ok")))
+      .orderBy(desc(snapshots.id))
+      .limit(1)
+      .get();
+    const meta = carryForwardAdapterMeta(result.meta, previousOk?.raw ?? null);
     db.insert(snapshots)
       .values({
         accountId,
@@ -285,7 +294,7 @@ async function pollAccountUnchecked(accountId: string, options: { manual?: boole
         error: null,
         windows: JSON.stringify(result.windows),
         balance: result.balance ? JSON.stringify(result.balance) : null,
-        raw: JSON.stringify({ meta: result.meta ?? null, responses: rawResult }),
+        raw: JSON.stringify({ meta: meta ?? null, responses: rawResult }),
       })
       .run();
     const interval = await effectiveIntervalMinutes(account);

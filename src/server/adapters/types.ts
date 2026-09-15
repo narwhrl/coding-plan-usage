@@ -78,18 +78,26 @@ export function clampPercent(value: number | null | undefined): number | null {
   return n;
 }
 
+/** epoch 毫秒。>1e12 当毫秒，>1e9 当秒；其余返回 null。 */
+export function epochMs(value: unknown): number | null {
+  const n = numberOrNull(value);
+  if (n === null || n <= 0) return null;
+  if (n > 1e12) return n;
+  if (n > 1e9) return n * 1000;
+  return null;
+}
+
 export function isoOrNull(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value === "number" && Number.isFinite(value)) {
-    // epoch 毫秒/秒兼容
-    const ms = value > 1e12 ? value : value > 1e9 ? value * 1000 : null;
-    return ms !== null && ms > 0 ? new Date(ms).toISOString() : null;
+    const ms = epochMs(value);
+    return ms !== null ? new Date(ms).toISOString() : null;
   }
   if (typeof value !== "string") return null;
   const num = Number(value);
   if (Number.isFinite(num) && value.trim() !== "" && num > 1e9) {
-    const ms = num > 1e12 ? num : num * 1000;
-    return ms > 0 ? new Date(ms).toISOString() : null;
+    const ms = epochMs(num);
+    return ms !== null ? new Date(ms).toISOString() : null;
   }
   const ts = Date.parse(value);
   return Number.isFinite(ts) && ts > 0 ? new Date(ts).toISOString() : null;

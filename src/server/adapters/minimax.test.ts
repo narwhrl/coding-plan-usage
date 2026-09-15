@@ -295,4 +295,99 @@ describe("minimax adapter", () => {
     expect(result.meta?.tokenUsage).toBeUndefined();
     expect(result.windows).toHaveLength(4);
   });
+
+  it("falls back to the other region's billing host when the preferred www fails", async () => {
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+          },
+        ]),
+      [BILLING_URL]: () => new Response("nope", { status: 500 }),
+      "https://www.minimaxi.com/account/amount": () =>
+        new Response(
+          JSON.stringify({ charge_records: [{ consume_token: "100", created_at: at(1) }] }),
+          { status: 200 },
+        ),
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    expect(result.meta?.tokenUsage).toMatchObject({ lastDayTokens: 100, weekTokens: 100 });
+  });
+
+  it("accepts millisecond created_at and input/output token fields", async () => {
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+          },
+        ]),
+      [BILLING_URL]: () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              charge_records: [
+                { consume_input_token: "80", consume_output_token: "20", created_at: at(1) * 1000 },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    expect(result.meta?.tokenUsage).toMatchObject({ lastDayTokens: 100, weekTokens: 100 });
+  });
+
+  it("sends a platform Referer on billing requests", async () => {
+    let referer: string | null = null;
+    const fetchFn = routeFetch({
+      [TOKEN_PLAN_URL]: () =>
+        remainsResponse([
+          {
+            model_name: "general",
+            current_interval_remaining_percent: "41",
+            current_interval_status: 1,
+            current_weekly_remaining_percent: "94",
+            current_weekly_status: 1,
+          },
+        ]),
+      [BILLING_URL]: (init) => {
+        referer = new Headers(init?.headers).get("Referer");
+        return new Response(JSON.stringify({ charge_records: [] }), { status: 200 });
+      },
+    });
+
+    const result = await minimaxAdapter.fetchUsage({
+      ...ctxBase,
+      credentials: { apiKey: "mm-key" },
+      config: { baseUrl: "https://api.minimax.io" },
+      fetchFn,
+    });
+
+    expect(referer).toBe("https://platform.minimax.io/");
+    expect(result.meta).toEqual({ tokenUsage: null });
+  });
 });
