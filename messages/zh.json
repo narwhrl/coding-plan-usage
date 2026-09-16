@@ -95,6 +95,8 @@
     "chart": "趋势",
     "chartRemaining": "剩余百分比",
     "chartBalance": "余额",
+    "chartReset": "重置点",
+    "chartResetNote": "已重置",
     "windows": "窗口详情",
     "windowsEmpty": "暂无窗口数据",
     "modelLanes": "模型额度",

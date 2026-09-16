@@ -95,6 +95,8 @@
     "chart": "Trend",
     "chartRemaining": "Remaining %",
     "chartBalance": "Balance",
+    "chartReset": "Reset point",
+    "chartResetNote": "Reset",
     "windows": "Windows",
     "windowsEmpty": "No window data yet",
     "modelLanes": "Model quotas",
